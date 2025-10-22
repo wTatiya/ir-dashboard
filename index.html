@@ -272,6 +272,35 @@
       const d = new Date(s);
       return isNaN(d.getTime()) ? null : d;
     }
+    function hasTimeComponent(raw){
+      return typeof raw === 'string' && /[T\s]\d{1,2}:\d{2}/.test(raw);
+    }
+    function hasSecondsComponent(raw){
+      return typeof raw === 'string' && /[T\s]\d{1,2}:\d{2}:\d{2}/.test(raw);
+    }
+    function formatThaiDate(value){
+      const date = value instanceof Date ? value : toDate(value);
+      if(!date) return value || '';
+      const options = { day: 'numeric', month: 'long', year: 'numeric' };
+      if(hasTimeComponent(value)){
+        options.hour = '2-digit';
+        options.minute = '2-digit';
+        if(hasSecondsComponent(value)){
+          options.second = '2-digit';
+        }
+        options.hour12 = false;
+      }
+      let formatted = new Intl.DateTimeFormat('th-TH-u-ca-buddhist', options).format(date);
+      if(options.hour){
+        formatted = formatted.replace(' เวลา ', ' ');
+      }
+      return formatted;
+    }
+    function formatThaiMonth(key){
+      const date = toDate(`${key}-01`);
+      if(!date) return key;
+      return new Intl.DateTimeFormat('th-TH-u-ca-buddhist', { month: 'short', year: 'numeric' }).format(date);
+    }
     function yyyymm(d) { return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0"); }
 
     function setupFilters(){
@@ -321,7 +350,7 @@
     function renderKPIs(sd, ed){
       kpiTotal.textContent = FILTERED.length.toLocaleString('th-TH');
       if(sd && ed){
-        kpiPeriod.textContent = `ช่วง: ${sd.toISOString().slice(0,10)} ถึง ${ed.toISOString().slice(0,10)}`;
+        kpiPeriod.textContent = `ช่วง: ${formatThaiDate(sd)} ถึง ${formatThaiDate(ed)}`;
       }else{
         kpiPeriod.textContent = `ทั้งหมด (${RAW.length.toLocaleString('th-TH')} รายการ)`;
       }
@@ -350,8 +379,9 @@
         if(!key) return;
         byMonth.set(key, (byMonth.get(key)||0)+1);
       });
-      const labels = Array.from(byMonth.keys()).sort();
-      const data = labels.map(l => byMonth.get(l));
+      const entries = Array.from(byMonth.entries()).sort((a,b)=>a[0].localeCompare(b[0]));
+      const labels = entries.map(([key]) => formatThaiMonth(key));
+      const data = entries.map(([,value]) => value);
 
       const ctx = document.getElementById('trendChart').getContext('2d');
       if(trendChart){ trendChart.destroy(); }
@@ -399,7 +429,7 @@
       const rows = FILTERED.slice(0,1000).map(r => `
         <tr>
           <td><strong>${r.Incident_ID}</strong></td>
-          <td>${r.Incident_Date || ''}</td>
+          <td>${formatThaiDate(r.Incident_Date)}</td>
           <td>${r.Department || ''}</td>
           <td>${r.Incident_Type || ''}</td>
           <td title="${(r.Incident_Type_Details||'').replace(/"/g,'&quot;')}">${(r.Incident_Type_Details || '').slice(0,80)}</td>
