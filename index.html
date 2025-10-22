@@ -1,0 +1,415 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>แดชบอร์ดเหตุการณ์ความปลอดภัยผู้ป่วย</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #f2f7ff 0%, #fff5f7 35%, #f3fffa 100%);
+      --card-bg: rgba(255, 255, 255, 0.88);
+      --primary: #2c3d7a;
+      --accent: #ff8a5b;
+      --accent-2: #2bb1a8;
+      --accent-3: #ffcd4b;
+      --text: #1f2a44; /* avoid black */
+      --muted: #5d6a93;
+      --shadow: 0 18px 40px rgba(44, 61, 122, 0.12);
+      --radius-lg: 24px;
+      --radius-md: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      font-family: "K2D", sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text);
+      display: flex; justify-content: center;
+      padding: 32px 14px 48px;
+    }
+    .dashboard {
+      width: min(1180px, 100%);
+      background: rgba(255, 255, 255, 0.72);
+      border-radius: var(--radius-lg);
+      padding: 28px 24px 36px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+    header { display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
+    header h1 { margin:0; font-size: clamp(1.6rem, 2.7vw, 2.2rem); font-weight:600; color: var(--primary); }
+    header p { margin:0; font-size:0.98rem; color: var(--muted); }
+
+    .controls { display:grid; gap:10px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin: 14px 0 18px;}
+    .control { display:flex; flex-direction:column; gap:6px; }
+    .control label { font-size:0.85rem; color: var(--muted); }
+    .control input, .control select {
+      padding:10px 12px; border-radius:14px; border:1px solid rgba(44,61,122,0.18);
+      background: rgba(255,255,255,0.9); color: var(--primary); font-size:0.95rem;
+      box-shadow: inset 0 4px 10px rgba(31,42,68,0.06);
+    }
+    .kpi-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .kpi { background: var(--card-bg); border-radius:18px; padding:16px 18px; border:1px solid rgba(44,61,122,0.1); box-shadow: 0 10px 22px rgba(31,42,68,0.08); }
+    .kpi .label { font-size:0.86rem; color: var(--muted); }
+    .kpi .value { font-size:1.9rem; font-weight:600; color: var(--primary); }
+    .kpi .note { font-size:0.85rem; color: var(--muted); }
+
+    .grid-2 { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 14px;}
+    .card { background: var(--card-bg); border-radius:18px; padding:18px; border:1px solid rgba(44,61,122,0.1); box-shadow: 0 10px 22px rgba(31,42,68,0.08); }
+    .card h3 { margin:0 0 10px; color: var(--primary); font-size:1.12rem; }
+
+    .table-wrapper { overflow-x:auto; margin-top: 14px;}
+    table { width:100%; border-collapse: collapse; font-size:0.9rem; }
+    th, td { border-bottom:1px solid rgba(44,61,122,0.12); padding:8px; text-align:left; white-space: nowrap; }
+    th { color: var(--muted); font-weight:600; background: rgba(44,61,122,0.06); }
+    td strong { color: var(--primary); }
+
+    .pill { display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px; background: rgba(43, 177, 168, 0.16); color:#15766f; font-weight:500; font-size:0.85rem; }
+
+    /* Login modal */
+    .modal { position: fixed; inset:0; background: rgba(0,0,0,0.25); display:none; align-items:center; justify-content:center; }
+    .modal.active { display:flex; }
+    .modal-card { width:min(420px, 92%); background:#fff; color:var(--text); border-radius:16px; padding:20px; box-shadow: var(--shadow); }
+    .modal-card h2 { margin:0 0 8px; color: var(--primary); }
+    .modal-card p { margin:6px 0 12px; color: var(--muted); }
+    .modal-card input { width:100%; padding:12px; border-radius:12px; border:1px solid rgba(44,61,122,0.18); font-size:1rem; }
+    .modal-card button {
+      margin-top:12px; width:100%; border:none; border-radius:12px; padding:10px 12px;
+      background: linear-gradient(135deg, #2c3d7a, #3c58b9); color:#f7f9ff; font-weight:600; cursor:pointer;
+      box-shadow: 0 12px 26px rgba(60,88,185,0.28);
+    }
+    footer { margin-top: 18px; font-size:0.8rem; color: var(--muted); text-align:right; }
+  </style>
+</head>
+<body>
+  <div id="loginModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+      <h2 id="loginTitle">เข้าสู่ระบบ</h2>
+      <p>กรอกเลขพนักงาน 7 หลักเพื่อเข้าดูแดชบอร์ด</p>
+      <input id="empInput" type="text" placeholder="เช่น 1234567" inputmode="numeric" maxlength="7" />
+      <button id="loginBtn">เข้าสู่แดชบอร์ด</button>
+      <p class="hint" style="font-size:0.85rem;color:#5d6a93;">ผู้ดูแลระบบสามารถเพิ่ม/ลบรายชื่อในตัวแปร <code>EMPLOYEE_IDS</code> ภายในไฟล์นี้</p>
+    </div>
+  </div>
+
+  <main class="dashboard" aria-live="polite">
+    <header>
+      <div class="pill">Incident Dashboard</div>
+      <h1>แดชบอร์ดรายงานอุบัติการณ์ (Clinical &amp; General)</h1>
+      <p>ข้อมูลอัปเดตจากไฟล์ <code>data/incidents.csv</code> บน GitHub Pages • เลือกช่วงเวลา/หน่วยงานเพื่อกรองรายการ</p>
+    </header>
+
+    <section class="controls" aria-label="ตัวกรองข้อมูล">
+      <div class="control">
+        <label for="startDate">ตั้งแต่วันที่</label>
+        <input type="date" id="startDate" />
+      </div>
+      <div class="control">
+        <label for="endDate">ถึงวันที่</label>
+        <input type="date" id="endDate" />
+      </div>
+      <div class="control">
+        <label for="deptSelect">หน่วยงาน</label>
+        <select id="deptSelect"></select>
+      </div>
+      <div class="control">
+        <label for="typeSelect">ชนิดอุบัติการณ์</label>
+        <select id="typeSelect"></select>
+      </div>
+    </section>
+
+    <section class="kpi-grid">
+      <div class="kpi">
+        <div class="label">จำนวนอุบัติการณ์</div>
+        <div class="value" id="kpiTotal">—</div>
+        <div class="note" id="kpiPeriod">กำลังโหลด...</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Clinical vs General</div>
+        <div class="value"><span id="kpiClinical">—</span> / <span id="kpiGeneral">—</span></div>
+        <div class="note">จำแนกจากช่องผลการแปลผลความรุนแรง</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Severe Harm (G–I)</div>
+        <div class="value" id="kpiSevere">—</div>
+        <div class="note">นับเฉพาะ Clinical</div>
+      </div>
+      <div class="kpi">
+        <div class="label">หน่วยงานที่พบมากสุด</div>
+        <div class="value" id="kpiTopDept">—</div>
+        <div class="note">จากการกรองปัจจุบัน</div>
+      </div>
+    </section>
+
+    <section class="grid-2">
+      <div class="card">
+        <h3>แนวโน้มรายเดือน</h3>
+        <canvas id="trendChart" height="140"></canvas>
+      </div>
+      <div class="card">
+        <h3>ประเภทอุบัติการณ์ยอดฮิต</h3>
+        <canvas id="typeBar" height="140"></canvas>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:16px;">
+      <h3>ตารางเหตุการณ์ (สูงสุด 1,000 แถวแรก)</h3>
+      <div class="table-wrapper">
+        <table id="dataTable">
+          <thead>
+            <tr>
+              <th>Incident_ID</th>
+              <th>วันที่เกิด</th>
+              <th>หน่วยงาน</th>
+              <th>ชนิด</th>
+              <th>รายละเอียด</th>
+              <th>Severity</th>
+              <th>Harm Clinical</th>
+              <th>Harm General</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>แหล่งข้อมูล: Google Sheet (ส่งออก CSV) หรือไฟล์ <code>data/incidents.csv</code> • โฮสต์บน GitHub Pages</footer>
+  </main>
+
+  <script>
+    // ===== Admin: static allowlist =====
+    const EMPLOYEE_IDS = [
+      "1234567"  // TODO: แทนที่ด้วยเลขพนักงานจริง (7 หลัก) ทีละบรรทัด
+    ];
+
+    const modal = document.getElementById('loginModal');
+    const empInput = document.getElementById('empInput');
+    const loginBtn = document.getElementById('loginBtn');
+
+    function isValidUser(id) {
+      return /^[0-9]{7}$/.test(id) && EMPLOYEE_IDS.includes(id);
+    }
+    function openModal() { modal.classList.add('active'); modal.setAttribute('aria-hidden','false'); }
+    function closeModal() { modal.classList.remove('active'); modal.setAttribute('aria-hidden','true'); }
+
+    loginBtn.addEventListener('click', () => {
+      const id = (empInput.value || '').trim();
+      if (isValidUser(id)) {
+        localStorage.setItem('incident_dashboard_empid', id);
+        closeModal();
+        init();
+      } else {
+        alert('รหัสไม่ถูกต้อง หรือไม่มีสิทธิ์เข้าถึง');
+      }
+    });
+
+    // Auto open modal if no valid login
+    (function checkLogin(){
+      const saved = localStorage.getItem('incident_dashboard_empid');
+      if (!saved || !isValidUser(saved)) {
+        openModal();
+      } else {
+        init();
+      }
+    })();
+
+    // ====== Data & Charts ======
+    const CSV_URL = "data/incidents.csv"; // relative path in the repo
+    let RAW = [];
+    let FILTERED = [];
+    let trendChart, typeChart;
+
+    // Elements
+    const kpiTotal = document.getElementById('kpiTotal');
+    const kpiPeriod = document.getElementById('kpiPeriod');
+    const kpiClinical = document.getElementById('kpiClinical');
+    const kpiGeneral = document.getElementById('kpiGeneral');
+    const kpiSevere = document.getElementById('kpiSevere');
+    const kpiTopDept = document.getElementById('kpiTopDept');
+    const startDateEl = document.getElementById('startDate');
+    const endDateEl = document.getElementById('endDate');
+    const deptSelect = document.getElementById('deptSelect');
+    const typeSelect = document.getElementById('typeSelect');
+    const tableBody = document.querySelector('#dataTable tbody');
+
+    function init(){
+      // Load CSV once
+      Papa.parse(CSV_URL, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: (res) => {
+          RAW = res.data.map(row => ({
+            Incident_ID: (row.Incident_ID || '').toString(),
+            Incident_Type: row.Incident_Type || '',
+            Incident_Type_Details: row.Incident_Type_Details || '',
+            Department: row.Department || '',
+            Severity_Code: row.Severity_Code || '',
+            Harm_Level_Clinical: row.Harm_Level_Clinical || '',
+            Harm_Level_General: row.Harm_Level_General || '',
+            Incident_Date: row.Incident_Date || '',
+            Discovery_Date: row.Discovery_Date || '',
+            Report_Date: row.Report_Date || '',
+            Confirmation_Date: row.Confirmation_Date || '',
+            Notification_Date: row.Notification_Date || '',
+            Status_Date: row.Status_Date || '',
+            Resolution_Date: row.Resolution_Date || ''
+          }));
+          setupFilters();
+          applyFilters();
+        }
+      });
+    }
+
+    function unique(arr) { return Array.from(new Set(arr.filter(Boolean))); }
+    function toDate(s){
+      if(!s) return null;
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    function yyyymm(d) { return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0"); }
+
+    function setupFilters(){
+      // Date range from data
+      const dates = RAW.map(r => toDate(r.Incident_Date)).filter(Boolean).sort((a,b)=>a-b);
+      if(dates.length){
+        const min = dates[0].toISOString().slice(0,10);
+        const max = dates[dates.length-1].toISOString().slice(0,10);
+        startDateEl.value = min;
+        endDateEl.value = max;
+      }
+      startDateEl.addEventListener('change', applyFilters);
+      endDateEl.addEventListener('change', applyFilters);
+
+      // Departments
+      const depts = unique(RAW.map(r => r.Department)).sort((a,b)=>a.localeCompare(b,'th'));
+      deptSelect.innerHTML = ['<option value="">ทั้งหมด</option>'].concat(depts.map(d=>`<option value="${d}">${d}</option>`)).join('');
+      deptSelect.addEventListener('change', applyFilters);
+
+      // Incident types
+      const types = unique(RAW.map(r => r.Incident_Type)).sort();
+      typeSelect.innerHTML = ['<option value="">ทั้งหมด</option>'].concat(types.map(t=>`<option value="${t}">${t}</option>`)).join('');
+      typeSelect.addEventListener('change', applyFilters);
+    }
+
+    function applyFilters(){
+      const sd = toDate(startDateEl.value);
+      const ed = toDate(endDateEl.value);
+      const dept = deptSelect.value;
+      const typ = typeSelect.value;
+
+      FILTERED = RAW.filter(r => {
+        const d = toDate(r.Incident_Date);
+        if(sd && (!d || d < sd)) return false;
+        if(ed && (!d || d > ed)) return false;
+        if(dept && r.Department !== dept) return false;
+        if(typ && r.Incident_Type !== typ) return false;
+        return true;
+      });
+
+      renderKPIs(sd, ed);
+      renderTrend();
+      renderTypeBar();
+      renderTable();
+    }
+
+    function renderKPIs(sd, ed){
+      kpiTotal.textContent = FILTERED.length.toLocaleString('th-TH');
+      if(sd && ed){
+        kpiPeriod.textContent = `ช่วง: ${sd.toISOString().slice(0,10)} ถึง ${ed.toISOString().slice(0,10)}`;
+      }else{
+        kpiPeriod.textContent = `ทั้งหมด (${RAW.length.toLocaleString('th-TH')} รายการ)`;
+      }
+
+      const clinical = FILTERED.filter(r => (r.Harm_Level_Clinical || '').trim() !== '').length;
+      const general = FILTERED.filter(r => (r.Harm_Level_General || '').trim() !== '').length;
+      kpiClinical.textContent = clinical.toLocaleString('th-TH');
+      kpiGeneral.textContent = general.toLocaleString('th-TH');
+
+      const severeSet = new Set(['G','H','I']);
+      const severe = FILTERED.filter(r => severeSet.has((r.Severity_Code || '').trim().toUpperCase())).length;
+      kpiSevere.textContent = severe.toLocaleString('th-TH');
+
+      // top dept
+      const byDept = {};
+      FILTERED.forEach(r => { if(!r.Department) return; byDept[r.Department] = (byDept[r.Department]||0)+1; });
+      const top = Object.entries(byDept).sort((a,b)=>b[1]-a[1])[0];
+      kpiTopDept.textContent = top ? `${top[0]} (${top[1].toLocaleString('th-TH')})` : '—';
+    }
+
+    function renderTrend(){
+      const byMonth = new Map();
+      FILTERED.forEach(r => {
+        const d = toDate(r.Incident_Date);
+        const key = d ? yyyymm(d) : null;
+        if(!key) return;
+        byMonth.set(key, (byMonth.get(key)||0)+1);
+      });
+      const labels = Array.from(byMonth.keys()).sort();
+      const data = labels.map(l => byMonth.get(l));
+
+      const ctx = document.getElementById('trendChart').getContext('2d');
+      if(trendChart){ trendChart.destroy(); }
+      trendChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'จำนวนเหตุการณ์', data }]},
+        options: {
+          responsive:true,
+          plugins:{ legend:{ labels:{ color:'#1f2a44' } } },
+          scales:{
+            x:{ ticks:{ color:'#5d6a93' }, grid:{ color:'rgba(31,42,68,0.12)'} },
+            y:{ ticks:{ color:'#5d6a93' }, grid:{ color:'rgba(31,42,68,0.12)'} }
+          }
+        }
+      });
+    }
+
+    function renderTypeBar(){
+      const byType = {};
+      FILTERED.forEach(r => {
+        const key = r.Incident_Type || '(ไม่ระบุ)';
+        byType[key] = (byType[key]||0)+1;
+      });
+      const entries = Object.entries(byType).sort((a,b)=>b[1]-a[1]).slice(0,12);
+      const labels = entries.map(e=>e[0]);
+      const data = entries.map(e=>e[1]);
+
+      const ctx = document.getElementById('typeBar').getContext('2d');
+      if(typeChart){ typeChart.destroy(); }
+      typeChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'จำนวน', data }]},
+        options: {
+          responsive:true,
+          plugins:{ legend:{ labels:{ color:'#1f2a44' } } },
+          scales:{
+            x:{ ticks:{ color:'#5d6a93' }, grid:{ color:'rgba(31,42,68,0.12)'} },
+            y:{ ticks:{ color:'#5d6a93' }, grid:{ color:'rgba(31,42,68,0.12)'} }
+          }
+        }
+      });
+    }
+
+    function renderTable(){
+      const rows = FILTERED.slice(0,1000).map(r => `
+        <tr>
+          <td><strong>${r.Incident_ID}</strong></td>
+          <td>${r.Incident_Date || ''}</td>
+          <td>${r.Department || ''}</td>
+          <td>${r.Incident_Type || ''}</td>
+          <td title="${(r.Incident_Type_Details||'').replace(/"/g,'&quot;')}">${(r.Incident_Type_Details || '').slice(0,80)}</td>
+          <td>${r.Severity_Code || ''}</td>
+          <td>${r.Harm_Level_Clinical || ''}</td>
+          <td>${r.Harm_Level_General || ''}</td>
+        </tr>
+      `).join('');
+      tableBody.innerHTML = rows || '<tr><td colspan="8">ไม่มีข้อมูลตามเงื่อนไขการกรอง</td></tr>';
+    }
+  </script>
+</body>
+</html>
