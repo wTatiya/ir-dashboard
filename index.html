@@ -372,6 +372,22 @@
         sync();
         applyFilters();
       });
+
+      const container = inputEl.closest('.date-field');
+      if(container){
+        container.addEventListener('click', () => {
+          if(document.activeElement !== inputEl){
+            inputEl.focus();
+          }
+          if(typeof inputEl.showPicker === 'function'){
+            try {
+              inputEl.showPicker();
+            } catch (err) {
+              // Some browsers throw if called while picker already open.
+            }
+          }
+        });
+      }
     }
 
     function applyFilters(){
