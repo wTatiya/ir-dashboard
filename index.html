@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>แดชบอร์ดอุบัติการณ์สำหรับผู้บริหารการพยาบาล</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+    <script src="assets/js/app.js" type="module" defer></script>
+</head>
+<body>
+    <div class="login-overlay" id="loginOverlay" aria-hidden="true">
+        <div class="login-card" role="dialog" aria-labelledby="loginTitle" aria-describedby="loginDescription">
+            <div class="login-header">
+                <h2 id="loginTitle">เข้าสู่ระบบแดชบอร์ด</h2>
+                <p id="loginDescription">กรุณากรอกรหัสพนักงาน 7 หลัก เพื่อดูข้อมูลอุบัติการณ์</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <label for="employeeId">รหัสพนักงาน</label>
+                <input type="text" id="employeeId" name="employeeId" inputmode="numeric" pattern="\d{7}" maxlength="7" placeholder="เช่น 1234567" required>
+                <button type="submit" class="btn-primary">เข้าสู่ระบบ</button>
+                <p class="login-hint">ระบบจะจดจำรหัสไว้ในเครื่องนี้ คุณสามารถออกจากระบบได้จากเมนูมุมขวาบน</p>
+            </form>
+        </div>
+    </div>
+
+    <div class="page">
+        <aside class="sidebar">
+            <div class="brand">
+                <span class="brand-icon">IR</span>
+                <div>
+                    <h1>ศูนย์อุบัติการณ์</h1>
+                    <p>แดชบอร์ดการจัดการอุบัติการณ์</p>
+                </div>
+            </div>
+            <nav class="nav">
+                <a href="#overview" class="nav-item active">ภาพรวม</a>
+                <a href="#insights" class="nav-item">การวิเคราะห์</a>
+                <a href="#table" class="nav-item">ตารางข้อมูล</a>
+                <a href="#guide" class="nav-item">คู่มืออัปเดต</a>
+            </nav>
+            <div class="quick-stats">
+                <h2>สรุปย่อ</h2>
+                <ul>
+                    <li><span class="dot dot-green"></span>ปิดเหตุการณ์แล้ว <strong id="sidebarResolved">0</strong></li>
+                    <li><span class="dot dot-orange"></span>กำลังติดตาม <strong id="sidebarOpen">0</strong></li>
+                    <li><span class="dot dot-purple"></span>เหตุการณ์คลินิก <strong id="sidebarClinical">0</strong></li>
+                </ul>
+            </div>
+            <div class="logout">
+                <button id="logoutBtn" class="btn-secondary">ออกจากระบบ</button>
+            </div>
+        </aside>
+
+        <main class="content">
+            <header class="topbar" id="overview">
+                <div class="welcome">
+                    <p class="date-label" id="dataRefresh">ข้อมูลล่าสุด -</p>
+                    <h2>สวัสดี <span id="userName">ผู้ใช้งาน</span></h2>
+                    <p>แดชบอร์ดสำหรับผู้บริหารการพยาบาล เพื่อติดตามอุบัติการณ์สำคัญแบบเรียลไทม์</p>
+                </div>
+                <div class="profile-card">
+                    <div class="profile-avatar">👩‍⚕️</div>
+                    <div>
+                        <p class="profile-name">พื้นที่ดูแล</p>
+                        <p class="profile-role" id="profileDepartment">หน่วยงานกลาง</p>
+                    </div>
+                </div>
+            </header>
+
+            <section class="kpi-grid">
+                <article class="kpi-card gradient-blue">
+                    <header>
+                        <h3>จำนวนอุบัติการณ์ทั้งหมด</h3>
+                        <span class="kpi-tag">ทุกประเภท</span>
+                    </header>
+                    <div class="kpi-value" id="totalIncidents">0</div>
+                    <footer>
+                        <p>เฉลี่ยต่อสัปดาห์ <span id="weeklyAvg">0</span> ราย</p>
+                    </footer>
+                </article>
+                <article class="kpi-card gradient-orange">
+                    <header>
+                        <h3>กำลังติดตาม</h3>
+                        <span class="kpi-tag">ยังไม่ปิด</span>
+                    </header>
+                    <div class="kpi-value" id="openIncidents">0</div>
+                    <footer>
+                        <p>อายุเฉลี่ยของเหตุการณ์ <span id="avgOpenDays">0</span> วัน</p>
+                    </footer>
+                </article>
+                <article class="kpi-card gradient-purple">
+                    <header>
+                        <h3>เหตุการณ์ความรุนแรงสูง</h3>
+                        <span class="kpi-tag">ระดับ 4-5</span>
+                    </header>
+                    <div class="kpi-value" id="highSeverity">0</div>
+                    <footer>
+                        <p>สัดส่วน <span id="highSeverityRate">0%</span> ของทั้งหมด</p>
+                    </footer>
+                </article>
+                <article class="kpi-card gradient-green">
+                    <header>
+                        <h3>เวลาปิดเหตุการณ์เฉลี่ย</h3>
+                        <span class="kpi-tag">วันทำการ</span>
+                    </header>
+                    <div class="kpi-value" id="avgResolution">0</div>
+                    <footer>
+                        <p>ปิดใน 14 วัน <span id="fastClosureRate">0%</span></p>
+                    </footer>
+                </article>
+            </section>
+
+            <section class="insights" id="insights">
+                <div class="chart-card">
+                    <div class="card-header">
+                        <h3>แนวโน้มอุบัติการณ์รายเดือน</h3>
+                        <span class="card-subtitle">12 เดือนล่าสุด</span>
+                    </div>
+                    <canvas id="trendChart" aria-label="กราฟแสดงจำนวนอุบัติการณ์รายเดือน" role="img"></canvas>
+                </div>
+                <div class="chart-card">
+                    <div class="card-header">
+                        <h3>สัดส่วนระดับความรุนแรง</h3>
+                        <span class="card-subtitle">เปรียบเทียบคลินิกและทั่วไป</span>
+                    </div>
+                    <canvas id="severityChart" aria-label="กราฟแสดงสัดส่วนระดับความรุนแรง" role="img"></canvas>
+                </div>
+                <div class="chart-card">
+                    <div class="card-header">
+                        <h3>เหตุการณ์สูงสุดตามหมวด</h3>
+                        <span class="card-subtitle">5 อันดับแรก</span>
+                    </div>
+                    <canvas id="categoryChart" aria-label="กราฟแสดงเหตุการณ์สูงสุดตามหมวด" role="img"></canvas>
+                </div>
+            </section>
+
+            <section class="filters" aria-label="ตัวกรองข้อมูล">
+                <div class="filter-group">
+                    <label for="filterType">ประเภทอุบัติการณ์</label>
+                    <select id="filterType">
+                        <option value="all">ทั้งหมด</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterDepartment">หน่วยงาน</label>
+                    <select id="filterDepartment">
+                        <option value="all">ทั้งหมด</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterSeverity">ระดับความรุนแรง</label>
+                    <select id="filterSeverity">
+                        <option value="all">ทั้งหมด</option>
+                        <option value="1">ระดับ 1</option>
+                        <option value="2">ระดับ 2</option>
+                        <option value="3">ระดับ 3</option>
+                        <option value="4">ระดับ 4</option>
+                        <option value="5">ระดับ 5</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterStart">ตั้งแต่วันที่</label>
+                    <input type="date" id="filterStart">
+                </div>
+                <div class="filter-group">
+                    <label for="filterEnd">ถึงวันที่</label>
+                    <input type="date" id="filterEnd">
+                </div>
+                <div class="filter-group">
+                    <button id="resetFilters" class="btn-secondary">ล้างตัวกรอง</button>
+                </div>
+            </section>
+
+            <section class="data-table" id="table">
+                <div class="card-header">
+                    <div>
+                        <h3>รายละเอียดอุบัติการณ์</h3>
+                        <p id="tableSummary">แสดง 0 รายการ</p>
+                    </div>
+                    <div class="export-actions">
+                        <button id="downloadCsv" class="btn-primary">ดาวน์โหลด CSV</button>
+                    </div>
+                </div>
+                <div class="table-wrapper" role="region" aria-live="polite">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>รหัสอุบัติการณ์</th>
+                                <th>ประเภท</th>
+                                <th>รายละเอียด</th>
+                                <th>หน่วยงาน</th>
+                                <th>ระดับ</th>
+                                <th>ผลกระทบ (คลินิก)</th>
+                                <th>ผลกระทบ (ทั่วไป)</th>
+                                <th>วันที่เกิด</th>
+                                <th>วันที่รายงาน</th>
+                                <th>วันที่ยืนยัน</th>
+                                <th>วันที่ปิด</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="guide" id="guide">
+                <div class="card-header">
+                    <h3>วิธีอัปเดตข้อมูลประจำวัน</h3>
+                    <span class="card-subtitle">เหมาะสำหรับผู้ดูแลระบบที่ไม่มี API</span>
+                </div>
+                <ol>
+                    <li>เปิดไฟล์ <strong>data/incidents.csv</strong> ด้วย Google Sheets หรือโปรแกรมตารางคำนวณ</li>
+                    <li>คัดลอกข้อมูลจากแหล่งที่มาแล้ววางทับ โดยคงหัวคอลัมน์เดิมไว้ทุกครั้ง</li>
+                    <li>บันทึกไฟล์เป็นรูปแบบ <strong>CSV UTF-8</strong> แล้วอัปโหลดกลับมายังตำแหน่งเดิม</li>
+                    <li>รีเฟรชหน้าเว็บ แดชบอร์ดจะคำนวณผลใหม่อัตโนมัติ</li>
+                </ol>
+                <p class="note">หมายเหตุ: รูปแบบวันที่ในไฟล์ควรเป็น DD/MM/YYYY หรือ YYYY-MM-DD เพื่อให้ระบบแปลงเป็นปฏิทินพุทธศักราชได้ถูกต้อง</p>
+            </section>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <p>พัฒนาเพื่อทีมบริหารการพยาบาล &mdash; เวอร์ชัน 1.0</p>
+    </footer>
+</body>
+</html>
