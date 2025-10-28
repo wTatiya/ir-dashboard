@@ -112,7 +112,24 @@ const elements = {
   filterEnd: document.getElementById('filterEnd'),
   resetFilters: document.getElementById('resetFilters'),
   downloadCsv: document.getElementById('downloadCsv'),
-  categoryExplanations: document.getElementById('categoryExplanations')
+  categoryExplanations: document.getElementById('categoryExplanations'),
+  sidebarFilters: {
+    container: document.getElementById('sidebarFilters'),
+    groups: {
+      department: {
+        toggle: document.querySelector('[data-filter-group="department"] .sidebar-filter-toggle'),
+        list: document.getElementById('sidebarFilterDepartment')
+      },
+      severity: {
+        toggle: document.querySelector('[data-filter-group="severity"] .sidebar-filter-toggle'),
+        list: document.getElementById('sidebarFilterSeverity')
+      },
+      type: {
+        toggle: document.querySelector('[data-filter-group="type"] .sidebar-filter-toggle'),
+        list: document.getElementById('sidebarFilterType')
+      }
+    }
+  }
 };
 
 function parseDate(value) {
@@ -660,6 +677,71 @@ function getSeverityDisplayValue(item) {
   return item.Severity_Code_Display || 'ไม่ระบุ';
 }
 
+const SIDEBAR_FILTER_CONFIG = {
+  department: {
+    stateKey: 'department',
+    selectKey: 'filterDepartment',
+    getOptionMeta: (item) => {
+      const raw = (item.Department || '').trim();
+      return {
+        value: raw,
+        label: raw || 'ไม่ระบุหน่วยงาน'
+      };
+    },
+    sort: (a, b) => {
+      const labelA = a.label || '';
+      const labelB = b.label || '';
+      const isUnknownA = labelA === 'ไม่ระบุหน่วยงาน';
+      const isUnknownB = labelB === 'ไม่ระบุหน่วยงาน';
+      if (isUnknownA && !isUnknownB) return 1;
+      if (!isUnknownA && isUnknownB) return -1;
+      return labelA.localeCompare(labelB, 'th');
+    }
+  },
+  severity: {
+    stateKey: 'severity',
+    selectKey: 'filterSeverity',
+    getOptionMeta: (item) => {
+      const value = getSeverityDisplayValue(item);
+      const label = item.isClinical ? `ระดับ ${value} (คลินิก)` : `ระดับ ${value}`;
+      return { value, label };
+    },
+    sort: (a, b) => {
+      if (a.value === b.value) return 0;
+      if (a.value === 'ไม่ระบุ') return 1;
+      if (b.value === 'ไม่ระบุ') return -1;
+      return compareSeverityValues(a.value, b.value);
+    }
+  },
+  type: {
+    stateKey: 'type',
+    selectKey: 'filterType',
+    getOptionMeta: (item) => {
+      const value = (item.Incident_Type || '').trim();
+      const detailRaw = (item.Incident_Type_Details || '').trim();
+      const cleanedDetail = detailRaw.replace(/[:：]\s*$/, '').trim();
+      let label = value;
+      if (value && cleanedDetail) {
+        label = `${value}: ${cleanedDetail}`;
+      } else if (!value && cleanedDetail) {
+        label = cleanedDetail;
+      } else if (!value) {
+        label = 'ไม่ระบุรหัส';
+      }
+      return {
+        value,
+        label: label || 'ไม่ระบุรหัส'
+      };
+    },
+    sort: (a, b) => {
+      if (a.count !== b.count) {
+        return b.count - a.count;
+      }
+      return (a.label || '').localeCompare(b.label || '', 'th');
+    }
+  }
+};
+
 function calculateKpis(data) {
   const total = data.length;
   const open = data.filter((item) => !item.isResolved);
@@ -702,9 +784,9 @@ function daysBetween(data, dateKey) {
   return Math.max(7, Math.round((max - min) / (1000 * 60 * 60 * 24)));
 }
 
-function applyFilters() {
-  const { filters, incidents } = state;
-  state.filtered = incidents.filter((item) => {
+function filterIncidentsWith(customFilters = state.filters) {
+  const filters = customFilters;
+  return state.incidents.filter((item) => {
     const matchesType = filters.type === 'all' || item.Incident_Type === filters.type;
     const matchesDepartment = filters.department === 'all' || item.Department === filters.department;
     const matchesSeverity = filters.severity === 'all'
@@ -716,17 +798,136 @@ function applyFilters() {
 
     return matchesType && matchesDepartment && matchesSeverity && afterStart && beforeEnd;
   });
+}
 
+function applyFilters() {
+  state.filtered = filterIncidentsWith(state.filters);
   renderTable();
   updateCharts();
   updateTableSummary();
   calculateKpis(state.filtered);
+  updateSidebarFilters();
 }
 
 function updateTableSummary() {
   const total = state.filtered.length;
   const open = state.filtered.filter((item) => !item.isResolved).length;
   elements.tableSummary.textContent = `แสดง ${formatNumber(total)} รายการ (กำลังติดตาม ${formatNumber(open)} ราย)`;
+}
+
+function updateSidebarFilters() {
+  const sidebarFilters = elements.sidebarFilters;
+  if (!sidebarFilters || !sidebarFilters.container) return;
+
+  const groups = sidebarFilters.groups || {};
+  Object.entries(SIDEBAR_FILTER_CONFIG).forEach(([groupKey, config]) => {
+    const groupElements = groups[groupKey];
+    if (!groupElements || !groupElements.list) return;
+
+    const baseFilters = { ...state.filters, [config.stateKey]: 'all' };
+    const baseData = filterIncidentsWith(baseFilters);
+    const counts = new Map();
+
+    baseData.forEach((item) => {
+      const meta = config.getOptionMeta(item);
+      if (!meta) return;
+      const value = meta.value ?? '';
+      const label = meta.label ?? (value || 'ไม่ระบุ');
+      const key = String(value);
+      if (!counts.has(key)) {
+        counts.set(key, { value, label, count: 0 });
+      }
+      counts.get(key).count += 1;
+    });
+
+    const options = Array.from(counts.values());
+    if (typeof config.sort === 'function') {
+      options.sort(config.sort);
+    }
+
+    const list = groupElements.list;
+    list.innerHTML = '';
+
+    const activeValue = String(state.filters[config.stateKey] ?? 'all');
+    list.appendChild(createSidebarFilterButton({
+      groupKey,
+      label: 'ทั้งหมด',
+      value: 'all',
+      count: baseData.length,
+      isActive: activeValue === 'all'
+    }));
+
+    if (options.length === 0) {
+      const empty = document.createElement('li');
+      empty.className = 'sidebar-filter-empty';
+      empty.textContent = 'ไม่มีข้อมูล';
+      list.appendChild(empty);
+      return;
+    }
+
+    options.forEach((option) => {
+      const value = option.value ?? '';
+      list.appendChild(createSidebarFilterButton({
+        groupKey,
+        label: option.label,
+        value,
+        count: option.count,
+        isActive: activeValue === String(value)
+      }));
+    });
+  });
+}
+
+function createSidebarFilterButton({ groupKey, label, value, count, isActive }) {
+  const li = document.createElement('li');
+  li.className = 'sidebar-filter-item';
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'sidebar-filter-option';
+  button.dataset.group = groupKey;
+  button.dataset.value = value === 'all' ? 'all' : String(value ?? '');
+  button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  if (isActive) {
+    button.classList.add('active');
+  }
+
+  const labelSpan = document.createElement('span');
+  labelSpan.className = 'sidebar-filter-label';
+  labelSpan.textContent = label;
+
+  const countSpan = document.createElement('span');
+  countSpan.className = 'sidebar-filter-count';
+  countSpan.textContent = formatNumber(count || 0);
+
+  button.append(labelSpan, countSpan);
+  button.addEventListener('click', () => {
+    handleSidebarFilterSelection(groupKey, value);
+  });
+
+  li.appendChild(button);
+  return li;
+}
+
+function handleSidebarFilterSelection(groupKey, rawValue) {
+  const config = SIDEBAR_FILTER_CONFIG[groupKey];
+  if (!config) return;
+
+  const normalized = rawValue === 'all' ? 'all' : String(rawValue ?? '');
+  if (state.filters[config.stateKey] === normalized) {
+    return;
+  }
+
+  state.filters[config.stateKey] = normalized;
+
+  const selectKey = config.selectKey;
+  const selectEl = selectKey ? elements[selectKey] : null;
+  if (selectEl) {
+    const hasOption = Array.from(selectEl.options).some((option) => option.value === normalized);
+    selectEl.value = hasOption ? normalized : 'all';
+  }
+
+  applyFilters();
 }
 
 function renderTable() {
@@ -1144,6 +1345,25 @@ function handleFilters() {
   });
 }
 
+function initSidebarFilters() {
+  const sidebarFilters = elements.sidebarFilters;
+  if (!sidebarFilters || !sidebarFilters.container) return;
+
+  const groups = sidebarFilters.groups || {};
+  Object.values(groups).forEach((group) => {
+    if (!group || !group.toggle || !group.list) return;
+    const initialExpanded = group.toggle.getAttribute('aria-expanded') === 'true';
+    group.list.hidden = !initialExpanded;
+    group.toggle.addEventListener('click', () => {
+      const expanded = group.toggle.getAttribute('aria-expanded') === 'true';
+      group.toggle.setAttribute('aria-expanded', String(!expanded));
+      group.list.hidden = expanded;
+    });
+  });
+
+  updateSidebarFilters();
+}
+
 function setupDownload() {
   elements.downloadCsv.addEventListener('click', () => {
     const headers = [
@@ -1292,6 +1512,7 @@ function init() {
   bindLoginEvents();
   handleLogin();
   handleFilters();
+  initSidebarFilters();
   initTimeframeControls();
   initTrendControls();
   setupDownload();

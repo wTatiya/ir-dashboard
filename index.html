@@ -29,25 +29,69 @@
 
     <div class="page">
         <aside class="sidebar">
-            <div class="brand">
-                <span class="brand-icon">IR</span>
-                <div>
-                    <h1>ศูนย์อุบัติการณ์</h1>
-                    <p>แดชบอร์ดการจัดการอุบัติการณ์</p>
+            <div class="sidebar-main">
+                <div class="brand">
+                    <span class="brand-icon">IR</span>
+                    <div>
+                        <h1>ศูนย์อุบัติการณ์</h1>
+                        <p>แดชบอร์ดการจัดการอุบัติการณ์</p>
+                    </div>
                 </div>
-            </div>
-            <nav class="nav">
-                <a href="#overview" class="nav-item active">ภาพรวม</a>
-                <a href="#insights" class="nav-item">การวิเคราะห์</a>
-                <a href="#table" class="nav-item">ตารางข้อมูล</a>
-            </nav>
-            <div class="quick-stats">
-                <h2>สรุปย่อ</h2>
-                <ul>
-                    <li><span class="dot dot-green"></span>ปิดเหตุการณ์แล้ว <strong id="sidebarResolved">0</strong></li>
-                    <li><span class="dot dot-orange"></span>กำลังติดตาม <strong id="sidebarOpen">0</strong></li>
-                    <li><span class="dot dot-purple"></span>เหตุการณ์คลินิก <strong id="sidebarClinical">0</strong></li>
-                </ul>
+                <nav class="nav">
+                    <a href="#overview" class="nav-item active">ภาพรวม</a>
+                    <a href="#insights" class="nav-item">การวิเคราะห์</a>
+                    <a href="#table" class="nav-item">ตารางข้อมูล</a>
+                </nav>
+                <div class="quick-stats">
+                    <h2>สรุปย่อ</h2>
+                    <ul>
+                        <li><span class="dot dot-green"></span>ปิดเหตุการณ์แล้ว <strong id="sidebarResolved">0</strong></li>
+                        <li><span class="dot dot-orange"></span>กำลังติดตาม <strong id="sidebarOpen">0</strong></li>
+                        <li><span class="dot dot-purple"></span>เหตุการณ์คลินิก <strong id="sidebarClinical">0</strong></li>
+                    </ul>
+                </div>
+                <div class="sidebar-filters" id="sidebarFilters" aria-label="จำแนกเหตุการณ์ตามหมวดหมู่">
+                    <h2>จำแนกเหตุการณ์</h2>
+                    <div class="sidebar-filter-group" data-filter-group="department">
+                        <button class="sidebar-filter-toggle" type="button" aria-expanded="true">
+                            <span class="sidebar-filter-title">หน่วยงาน</span>
+                            <span class="sidebar-filter-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                </svg>
+                            </span>
+                        </button>
+                        <ul class="sidebar-filter-options" id="sidebarFilterDepartment">
+                            <li class="sidebar-filter-empty">กำลังโหลด...</li>
+                        </ul>
+                    </div>
+                    <div class="sidebar-filter-group" data-filter-group="severity">
+                        <button class="sidebar-filter-toggle" type="button" aria-expanded="false">
+                            <span class="sidebar-filter-title">ระดับ</span>
+                            <span class="sidebar-filter-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                </svg>
+                            </span>
+                        </button>
+                        <ul class="sidebar-filter-options" id="sidebarFilterSeverity" hidden>
+                            <li class="sidebar-filter-empty">กำลังโหลด...</li>
+                        </ul>
+                    </div>
+                    <div class="sidebar-filter-group" data-filter-group="type">
+                        <button class="sidebar-filter-toggle" type="button" aria-expanded="false">
+                            <span class="sidebar-filter-title">ประเภท: รายละเอียด</span>
+                            <span class="sidebar-filter-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                </svg>
+                            </span>
+                        </button>
+                        <ul class="sidebar-filter-options" id="sidebarFilterType" hidden>
+                            <li class="sidebar-filter-empty">กำลังโหลด...</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
             <div class="logout">
                 <button id="logoutBtn" class="btn-secondary">ออกจากระบบ</button>
