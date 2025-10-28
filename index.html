@@ -70,6 +70,20 @@
                 </div>
             </header>
 
+            <section class="timeframe-bar" aria-label="เลือกช่วงเวลาในการแสดงข้อมูล">
+                <div class="timeframe-info">
+                    <span class="timeframe-label">ช่วงเวลาที่เลือก</span>
+                    <strong id="timeframeDisplay">เดือนนี้</strong>
+                </div>
+                <div class="timeframe-options" role="group" aria-label="ช่วงเวลา">
+                    <button class="timeframe-btn active" type="button" data-timeframe="thisMonth" aria-pressed="true">เดือนนี้</button>
+                    <button class="timeframe-btn" type="button" data-timeframe="lastMonth" aria-pressed="false">เดือนที่แล้ว</button>
+                    <button class="timeframe-btn" type="button" data-timeframe="last3Months" aria-pressed="false">3 เดือนล่าสุด</button>
+                    <button class="timeframe-btn" type="button" data-timeframe="thisYear" aria-pressed="false">ปีนี้</button>
+                    <button class="timeframe-btn" type="button" data-timeframe="all" aria-pressed="false">ทั้งหมด</button>
+                </div>
+            </section>
+
             <section class="kpi-grid">
                 <article class="kpi-card gradient-blue">
                     <header>

@@ -49,6 +49,8 @@ const state = {
   filtered: [],
   charts: {},
   trendPeriod: 'month',
+  timeframe: 'thisMonth',
+  timeframeLabel: '',
   filters: {
     type: 'all',
     department: 'all',
@@ -81,6 +83,8 @@ const elements = {
   sidebarClinical: document.getElementById('sidebarClinical'),
   trendRange: document.getElementById('trendRange'),
   trendSubtitle: document.getElementById('trendSubtitle'),
+  timeframeDisplay: document.getElementById('timeframeDisplay'),
+  timeframeButtons: document.querySelectorAll('[data-timeframe]'),
   filterType: document.getElementById('filterType'),
   filterDepartment: document.getElementById('filterDepartment'),
   filterSeverity: document.getElementById('filterSeverity'),
@@ -120,6 +124,128 @@ function formatThaiDate(value, withTime = false) {
 
 function formatNumber(value) {
   return value.toLocaleString('th-TH');
+}
+
+function formatDateInputValue(value) {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return '';
+  const year = value.getFullYear();
+  const month = (value.getMonth() + 1).toString().padStart(2, '0');
+  const day = value.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateInput(value) {
+  if (!value) return null;
+  const [year, month, day] = value.split('-').map(Number);
+  if ([year, month, day].some((item) => Number.isNaN(item))) return null;
+  return new Date(year, month - 1, day);
+}
+
+function endOfDay(date) {
+  const result = new Date(date);
+  result.setHours(23, 59, 59, 999);
+  return result;
+}
+
+function getTimeframeRange(key) {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+
+  if (key === 'thisMonth') {
+    const start = new Date(currentYear, currentMonth, 1);
+    const end = endOfDay(new Date(currentYear, currentMonth + 1, 0));
+    const label = `${THAI_MONTHS[currentMonth]} ${currentYear + 543}`;
+    return { start, end, label };
+  }
+
+  if (key === 'lastMonth') {
+    const ref = new Date(currentYear, currentMonth - 1, 1);
+    const start = new Date(ref.getFullYear(), ref.getMonth(), 1);
+    const end = endOfDay(new Date(ref.getFullYear(), ref.getMonth() + 1, 0));
+    const label = `${THAI_MONTHS[ref.getMonth()]} ${ref.getFullYear() + 543}`;
+    return { start, end, label };
+  }
+
+  if (key === 'last3Months') {
+    const startRef = new Date(currentYear, currentMonth - 2, 1);
+    const start = new Date(startRef.getFullYear(), startRef.getMonth(), 1);
+    const endRef = new Date(currentYear, currentMonth, 1);
+    const end = endOfDay(new Date(endRef.getFullYear(), endRef.getMonth() + 1, 0));
+    const label = `${THAI_MONTHS[start.getMonth()]} ${start.getFullYear() + 543} - ${THAI_MONTHS[end.getMonth()]} ${end.getFullYear() + 543}`;
+    return { start, end, label };
+  }
+
+  if (key === 'thisYear') {
+    const start = new Date(currentYear, 0, 1);
+    const end = endOfDay(new Date(currentYear, currentMonth + 1, 0));
+    const label = `ปี ${currentYear + 543}`;
+    return { start, end, label };
+  }
+
+  return { start: null, end: null, label: 'ตั้งแต่บันทึกครั้งแรก' };
+}
+
+function updateTimeframeButtons() {
+  if (!elements.timeframeButtons || elements.timeframeButtons.length === 0) return;
+  elements.timeframeButtons.forEach((button) => {
+    const isActive = button.dataset.timeframe === state.timeframe;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+}
+
+function updateTimeframeDisplay() {
+  if (!elements.timeframeDisplay) return;
+  if (state.timeframe === 'custom') {
+    const startText = state.filters.startDate ? formatThaiDate(state.filters.startDate) : 'ไม่กำหนด';
+    const endText = state.filters.endDate ? formatThaiDate(state.filters.endDate) : 'ไม่กำหนด';
+    elements.timeframeDisplay.textContent = `กำหนดเอง (${startText} - ${endText})`;
+    return;
+  }
+  const label = state.timeframeLabel || getTimeframeRange(state.timeframe).label;
+  elements.timeframeDisplay.textContent = label;
+}
+
+function markCustomTimeframe() {
+  state.timeframe = 'custom';
+  state.timeframeLabel = '';
+  updateTimeframeButtons();
+  updateTimeframeDisplay();
+}
+
+function setTimeframe(value) {
+  const { start, end, label } = getTimeframeRange(value);
+  state.timeframe = value;
+  state.timeframeLabel = label;
+  state.filters.startDate = start;
+  state.filters.endDate = end;
+  if (elements.filterStart) {
+    elements.filterStart.value = start ? formatDateInputValue(start) : '';
+  }
+  if (elements.filterEnd) {
+    const endForInput = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate()) : null;
+    elements.filterEnd.value = endForInput ? formatDateInputValue(endForInput) : '';
+  }
+  updateTimeframeButtons();
+  updateTimeframeDisplay();
+  applyFilters();
+}
+
+function initTimeframeControls() {
+  if (!elements.timeframeButtons || elements.timeframeButtons.length === 0) return;
+  elements.timeframeButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const { timeframe } = button.dataset;
+      if (!timeframe || timeframe === state.timeframe) return;
+      setTimeframe(timeframe);
+    });
+  });
+  if (!state.timeframeLabel) {
+    state.timeframeLabel = getTimeframeRange(state.timeframe).label;
+  }
+  updateTimeframeButtons();
+  updateTimeframeDisplay();
 }
 
 function parseCsv(text) {
@@ -624,29 +750,33 @@ function handleFilters() {
   });
 
   elements.filterStart.addEventListener('change', (event) => {
-    state.filters.startDate = event.target.value ? new Date(event.target.value) : null;
+    const startDate = event.target.value ? parseDateInput(event.target.value) : null;
+    if (startDate) {
+      startDate.setHours(0, 0, 0, 0);
+    }
+    state.filters.startDate = startDate;
+    markCustomTimeframe();
     applyFilters();
   });
 
   elements.filterEnd.addEventListener('change', (event) => {
-    if (event.target.value) {
-      const endDate = new Date(event.target.value);
+    const endDate = event.target.value ? parseDateInput(event.target.value) : null;
+    if (endDate) {
       endDate.setHours(23, 59, 59, 999);
-      state.filters.endDate = endDate;
-    } else {
-      state.filters.endDate = null;
     }
+    state.filters.endDate = endDate;
+    markCustomTimeframe();
     applyFilters();
   });
 
   elements.resetFilters.addEventListener('click', () => {
-    state.filters = { type: 'all', department: 'all', severity: 'all', startDate: null, endDate: null };
+    state.filters.type = 'all';
+    state.filters.department = 'all';
+    state.filters.severity = 'all';
     elements.filterType.value = 'all';
     elements.filterDepartment.value = 'all';
     elements.filterSeverity.value = 'all';
-    elements.filterStart.value = '';
-    elements.filterEnd.value = '';
-    applyFilters();
+    setTimeframe('thisMonth');
   });
 }
 
@@ -778,10 +908,7 @@ async function loadData() {
     state.incidents = incidents;
     state.filtered = incidents;
     populateSelectors();
-    calculateKpis(incidents);
-    renderTable();
-    updateCharts();
-    updateTableSummary();
+    setTimeframe(state.timeframe);
     displayDataRefreshDate();
   } catch (error) {
     console.error('ไม่สามารถโหลดข้อมูลได้', error);
@@ -803,6 +930,7 @@ function init() {
   bindLoginEvents();
   handleLogin();
   handleFilters();
+  initTimeframeControls();
   initTrendControls();
   setupDownload();
   initNavigation();
