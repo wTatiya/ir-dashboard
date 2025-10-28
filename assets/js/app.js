@@ -67,7 +67,6 @@ const elements = {
   logoutBtn: document.getElementById('logoutBtn'),
   userName: document.getElementById('userName'),
   dataRefresh: document.getElementById('dataRefresh'),
-  profileDepartment: document.getElementById('profileDepartment'),
   totalIncidents: document.getElementById('totalIncidents'),
   weeklyAvg: document.getElementById('weeklyAvg'),
   openIncidents: document.getElementById('openIncidents'),
@@ -866,7 +865,6 @@ function handleLogin() {
   const storedId = localStorage.getItem('irUserId');
   if (storedId) {
     elements.userName.textContent = `รหัส ${storedId}`;
-    elements.profileDepartment.textContent = 'ข้อมูลรวมทั้งหมด';
     elements.loginOverlay.classList.remove('active');
     elements.loginOverlay.setAttribute('aria-hidden', 'true');
     return;
@@ -885,7 +883,6 @@ function bindLoginEvents() {
     }
     localStorage.setItem('irUserId', value);
     elements.userName.textContent = `รหัส ${value}`;
-    elements.profileDepartment.textContent = 'ข้อมูลรวมทั้งหมด';
     elements.loginOverlay.classList.remove('active');
     elements.loginOverlay.setAttribute('aria-hidden', 'true');
     elements.employeeId.value = '';
