@@ -13,6 +13,20 @@ const THAI_MONTHS = [
   'ธันวาคม'
 ];
 
+const CLINICAL_SEVERITY_RANK = {
+  A: 1,
+  B: 2,
+  C: 3,
+  D: 4,
+  E: 5,
+  F: 6,
+  G: 7,
+  H: 8,
+  I: 9
+};
+
+const HIGH_SEVERITY_CLINICAL_THRESHOLD = CLINICAL_SEVERITY_RANK.G;
+
 const state = {
   incidents: [],
   filtered: [],
@@ -127,6 +141,13 @@ function enrichIncidents(records) {
     const reportDate = parseDate(item.Report_Date);
     const resolutionDate = parseDate(item.Resolution_Date);
     const confirmationDate = parseDate(item.Confirmation_Date);
+    const isClinical = item.Incident_Type.includes('คลินิก');
+    const severityRaw = (item.Severity_Code || '').trim();
+    const normalizedSeverity = isClinical ? severityRaw.toUpperCase() : severityRaw;
+    const severityDisplay = normalizedSeverity || 'ไม่ระบุ';
+    const severityRank = isClinical
+      ? CLINICAL_SEVERITY_RANK[normalizedSeverity] ?? null
+      : (Number(normalizedSeverity) || null);
 
     return {
       ...item,
@@ -134,8 +155,10 @@ function enrichIncidents(records) {
       Report_Date_Obj: reportDate,
       Resolution_Date_Obj: resolutionDate,
       Confirmation_Date_Obj: confirmationDate,
-      Severity_Code_Num: Number(item.Severity_Code) || null,
-      isClinical: item.Incident_Type.includes('คลินิก'),
+      Severity_Code_Display: severityDisplay,
+      Severity_Code_Rank: severityRank,
+      Severity_Code_Num: !isClinical ? severityRank : null,
+      isClinical,
       isResolved: Boolean(resolutionDate),
       leadTimeDays: incidentDate && resolutionDate
         ? Math.max(0, Math.round((resolutionDate - incidentDate) / (1000 * 60 * 60 * 24)))
@@ -151,17 +174,53 @@ function updateOptions(options, selectEl) {
   selectEl.innerHTML = '<option value="all">ทั้งหมด</option>';
   options.forEach((option) => {
     const opt = document.createElement('option');
-    opt.value = option;
-    opt.textContent = option;
+    if (typeof option === 'string') {
+      opt.value = option;
+      opt.textContent = option;
+    } else if (option && typeof option === 'object') {
+      opt.value = option.value;
+      opt.textContent = option.label || option.value;
+    }
     selectEl.appendChild(opt);
   });
+}
+
+function getSeverityOrderInfo(value) {
+  const numericValue = Number(value);
+  if (!Number.isNaN(numericValue) && numericValue > 0) {
+    return { type: 'general', rank: numericValue };
+  }
+
+  const code = String(value || '').toUpperCase();
+  const rank = CLINICAL_SEVERITY_RANK[code] ?? Number.POSITIVE_INFINITY;
+  return { type: 'clinical', rank };
+}
+
+function compareSeverityValues(a, b) {
+  const infoA = getSeverityOrderInfo(a);
+  const infoB = getSeverityOrderInfo(b);
+  if (infoA.type !== infoB.type) {
+    return infoA.type === 'general' ? -1 : 1;
+  }
+  return infoA.rank - infoB.rank;
+}
+
+function isHighSeverityIncident(item) {
+  if (item.isClinical) {
+    return (item.Severity_Code_Rank || 0) >= HIGH_SEVERITY_CLINICAL_THRESHOLD;
+  }
+  return (item.Severity_Code_Rank || 0) >= 4;
+}
+
+function getSeverityDisplayValue(item) {
+  return item.Severity_Code_Display || 'ไม่ระบุ';
 }
 
 function calculateKpis(data) {
   const total = data.length;
   const open = data.filter((item) => !item.isResolved);
   const resolved = data.filter((item) => item.isResolved);
-  const highSeverity = data.filter((item) => (item.Severity_Code_Num || 0) >= 4);
+  const highSeverity = data.filter((item) => isHighSeverityIncident(item));
   const clinical = data.filter((item) => item.isClinical);
   const incidentsPerWeek = total / Math.max(1, Math.round(daysBetween(data, 'Incident_Date_Obj') / 7));
 
@@ -204,7 +263,8 @@ function applyFilters() {
   state.filtered = incidents.filter((item) => {
     const matchesType = filters.type === 'all' || item.Incident_Type === filters.type;
     const matchesDepartment = filters.department === 'all' || item.Department === filters.department;
-    const matchesSeverity = filters.severity === 'all' || String(item.Severity_Code_Num) === filters.severity;
+    const matchesSeverity = filters.severity === 'all'
+      || (item.Severity_Code_Display && String(item.Severity_Code_Display) === filters.severity);
 
     const incidentDate = item.Incident_Date_Obj;
     const afterStart = !filters.startDate || (incidentDate && incidentDate >= filters.startDate);
@@ -236,7 +296,7 @@ function renderTable() {
       <td>${item.Incident_Type}</td>
       <td>${item.Incident_Type_Details}</td>
       <td>${item.Department}</td>
-      <td>${item.Severity_Code}</td>
+      <td>${item.Severity_Code_Display || '-'}</td>
       <td>${item.Harm_Level_Clinical || '-'}</td>
       <td>${item.Harm_Level_General || '-'}</td>
       <td>${formatThaiDate(item.Incident_Date_Obj)}</td>
@@ -329,12 +389,13 @@ function updateCharts() {
   });
 
   const severityGroups = data.reduce((acc, item) => {
-    const key = item.Severity_Code || 'ไม่ระบุ';
+    const key = getSeverityDisplayValue(item);
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
-  const severityLabels = Object.keys(severityGroups);
-  const severityValues = Object.values(severityGroups);
+  const severityEntries = Object.entries(severityGroups).sort((a, b) => compareSeverityValues(a[0], b[0]));
+  const severityLabels = severityEntries.map(([key]) => key);
+  const severityValues = severityEntries.map(([, value]) => value);
   if (severityLabels.length === 0) {
     severityLabels.push('ไม่มีข้อมูล');
     severityValues.push(0);
@@ -481,7 +542,7 @@ function setupDownload() {
       item.Incident_Type,
       item.Incident_Type_Details,
       item.Department,
-      item.Severity_Code,
+      item.Severity_Code_Display,
       item.Harm_Level_Clinical,
       item.Harm_Level_General,
       item.Incident_Date,
@@ -521,6 +582,23 @@ function populateSelectors() {
   const departments = Array.from(new Set(state.incidents.map((item) => item.Department))).sort();
   updateOptions(types, elements.filterType);
   updateOptions(departments, elements.filterDepartment);
+
+  const severityMap = new Map();
+  state.incidents.forEach((item) => {
+    const value = item.Severity_Code_Display;
+    if (!value) return;
+    if (!severityMap.has(value)) {
+      severityMap.set(value, {
+        label: item.isClinical ? `ระดับ ${value} (คลินิก)` : `ระดับ ${value}`,
+        type: item.isClinical ? 'clinical' : 'general'
+      });
+    }
+  });
+
+  const severityOptions = Array.from(severityMap.entries())
+    .sort((a, b) => compareSeverityValues(a[0], b[0]))
+    .map(([value, meta]) => ({ value, label: meta.label }));
+  updateOptions(severityOptions, elements.filterSeverity);
 }
 
 function handleLogin() {
