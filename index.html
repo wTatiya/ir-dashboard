@@ -66,14 +66,40 @@
             <section class="timeframe-bar" aria-label="เลือกช่วงเวลาในการแสดงข้อมูล">
                 <div class="timeframe-info">
                     <span class="timeframe-label">ช่วงเวลาที่เลือก</span>
-                    <strong id="timeframeDisplay">เดือนนี้</strong>
+                    <strong id="timeframeDisplay">-</strong>
                 </div>
-                <div class="timeframe-options" role="group" aria-label="ช่วงเวลา">
-                    <button class="timeframe-btn active" type="button" data-timeframe="thisMonth" aria-pressed="true">เดือนนี้</button>
-                    <button class="timeframe-btn" type="button" data-timeframe="lastMonth" aria-pressed="false">เดือนที่แล้ว</button>
-                    <button class="timeframe-btn" type="button" data-timeframe="last3Months" aria-pressed="false">3 เดือนล่าสุด</button>
-                    <button class="timeframe-btn" type="button" data-timeframe="thisYear" aria-pressed="false">ปีนี้</button>
-                    <button class="timeframe-btn" type="button" data-timeframe="all" aria-pressed="false">ทั้งหมด</button>
+                <div class="timeframe-controls" role="group" aria-label="ช่วงเวลา">
+                    <div class="timeframe-option" data-type="day">
+                        <button class="timeframe-btn timeframe-choice" type="button" aria-expanded="false">รายวัน</button>
+                        <div class="timeframe-panel" hidden>
+                            <label class="visually-hidden" for="timeframeDay">เลือกวันที่ต้องการ</label>
+                            <input type="date" id="timeframeDay">
+                        </div>
+                    </div>
+                    <div class="timeframe-option" data-type="month">
+                        <button class="timeframe-btn timeframe-choice" type="button" aria-expanded="false">รายเดือน</button>
+                        <div class="timeframe-panel" hidden>
+                            <label class="visually-hidden" for="timeframeMonth">เลือกเดือนที่ต้องการ</label>
+                            <select id="timeframeMonth"></select>
+                        </div>
+                    </div>
+                    <div class="timeframe-option" data-type="quarter">
+                        <button class="timeframe-btn timeframe-choice" type="button" aria-expanded="false">รายไตรมาส</button>
+                        <div class="timeframe-panel" hidden>
+                            <label class="visually-hidden" for="timeframeQuarter">เลือกไตรมาสที่ต้องการ</label>
+                            <select id="timeframeQuarter"></select>
+                        </div>
+                    </div>
+                    <div class="timeframe-option" data-type="year">
+                        <button class="timeframe-btn timeframe-choice" type="button" aria-expanded="false">รายปี</button>
+                        <div class="timeframe-panel" hidden>
+                            <label class="visually-hidden" for="timeframeYear">เลือกปีที่ต้องการ</label>
+                            <select id="timeframeYear"></select>
+                        </div>
+                    </div>
+                    <div class="timeframe-option" data-type="all">
+                        <button class="timeframe-btn timeframe-choice" type="button" aria-pressed="false">ทั้งหมด</button>
+                    </div>
                 </div>
             </section>
 
