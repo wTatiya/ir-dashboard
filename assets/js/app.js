@@ -90,7 +90,8 @@ const elements = {
   filterStart: document.getElementById('filterStart'),
   filterEnd: document.getElementById('filterEnd'),
   resetFilters: document.getElementById('resetFilters'),
-  downloadCsv: document.getElementById('downloadCsv')
+  downloadCsv: document.getElementById('downloadCsv'),
+  categoryExplanations: document.getElementById('categoryExplanations')
 };
 
 function parseDate(value) {
@@ -464,6 +465,54 @@ function createChart(key, config) {
   state.charts[key] = new Chart(ctx, config);
 }
 
+function updateCategoryDescriptions(categories, descriptions) {
+  if (!elements.categoryExplanations) return;
+
+  const container = elements.categoryExplanations;
+  container.innerHTML = '';
+
+  const visibleCategories = categories.filter(([name, count]) => {
+    if (name === 'ไม่มีข้อมูล') {
+      return Boolean(count);
+    }
+    return true;
+  });
+
+  if (visibleCategories.length === 0) {
+    const emptyMessage = document.createElement('p');
+    emptyMessage.className = 'chart-explainer__empty';
+    emptyMessage.textContent = 'ไม่มีหมวดหมู่ที่จะแสดง';
+    container.appendChild(emptyMessage);
+    return;
+  }
+
+  const title = document.createElement('h4');
+  title.className = 'chart-explainer__title';
+  title.textContent = 'คำอธิบายรหัสที่แสดง';
+  container.appendChild(title);
+
+  const list = document.createElement('ul');
+  list.className = 'chart-explainer__list';
+
+  visibleCategories.forEach(([code]) => {
+    const item = document.createElement('li');
+    item.className = 'chart-explainer__item';
+
+    const codeSpan = document.createElement('span');
+    codeSpan.className = 'chart-explainer__code';
+    codeSpan.textContent = code;
+
+    const descriptionSpan = document.createElement('span');
+    descriptionSpan.className = 'chart-explainer__description';
+    descriptionSpan.textContent = descriptions[code] || 'ไม่มีคำอธิบาย';
+
+    item.append(codeSpan, descriptionSpan);
+    list.appendChild(item);
+  });
+
+  container.appendChild(list);
+}
+
 function initTrendControls() {
   if (!elements.trendRange) return;
   state.trendPeriod = elements.trendRange.value || state.trendPeriod;
@@ -686,8 +735,19 @@ function updateCharts() {
     }
   });
 
+  const categoryDescriptions = data.reduce((acc, item) => {
+    const rawCode = (item.Incident_Type || '').trim();
+    const code = rawCode || 'ไม่ระบุรหัส';
+    if (acc[code]) return acc;
+    const detail = (item.Incident_Type_Details || '').trim();
+    if (!detail) return acc;
+    acc[code] = detail.replace(/[:：]\s*$/, '').trim() || detail;
+    return acc;
+  }, {});
+
   const categoryCounts = data.reduce((acc, item) => {
-    acc[item.Incident_Type] = (acc[item.Incident_Type] || 0) + 1;
+    const code = (item.Incident_Type || '').trim() || 'ไม่ระบุรหัส';
+    acc[code] = (acc[code] || 0) + 1;
     return acc;
   }, {});
   const sortedCategories = Object.entries(categoryCounts)
@@ -696,6 +756,8 @@ function updateCharts() {
   if (sortedCategories.length === 0) {
     sortedCategories.push(['ไม่มีข้อมูล', 0]);
   }
+
+  updateCategoryDescriptions(sortedCategories, categoryDescriptions);
 
   createChart('categoryChart', {
     type: 'bar',
