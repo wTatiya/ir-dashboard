@@ -660,6 +660,7 @@ input[type="text"]:focus {
 
 .table-wrapper {
     overflow-x: auto;
+    overflow-y: auto;
     max-height: 460px;
 }
 
