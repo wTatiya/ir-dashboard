@@ -267,9 +267,33 @@ a {
 .card-header {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: flex-start;
+    gap: 16px;
     margin-bottom: 16px;
     color: var(--text-primary);
+}
+
+.card-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.card-controls label {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.card-controls select {
+    min-width: 180px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(43, 58, 103, 0.2);
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--text-primary);
+    font-family: 'Prompt', sans-serif;
+    font-size: 14px;
 }
 
 .card-subtitle {
