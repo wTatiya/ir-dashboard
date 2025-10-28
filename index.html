@@ -116,10 +116,21 @@
             <section class="insights" id="insights">
                 <div class="chart-card">
                     <div class="card-header">
-                        <h3>แนวโน้มอุบัติการณ์รายเดือน</h3>
-                        <span class="card-subtitle">12 เดือนล่าสุด</span>
+                        <div>
+                            <h3>แนวโน้มอุบัติการณ์</h3>
+                            <span class="card-subtitle" id="trendSubtitle">12 เดือนล่าสุด</span>
+                        </div>
+                        <div class="card-controls">
+                            <label for="trendRange">ช่วงเวลา</label>
+                            <select id="trendRange">
+                                <option value="day">รายวัน (30 วัน)</option>
+                                <option value="month" selected>รายเดือน (ปีนี้)</option>
+                                <option value="quarter">รายไตรมาส (4 ไตรมาส)</option>
+                                <option value="year">รายปี (5 ปี)</option>
+                            </select>
+                        </div>
                     </div>
-                    <canvas id="trendChart" aria-label="กราฟแสดงจำนวนอุบัติการณ์รายเดือน" role="img"></canvas>
+                    <canvas id="trendChart" aria-label="กราฟแสดงจำนวนอุบัติการณ์ตามช่วงเวลา" role="img"></canvas>
                 </div>
                 <div class="chart-card">
                     <div class="card-header">

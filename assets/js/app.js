@@ -13,6 +13,23 @@ const THAI_MONTHS = [
   'ธันวาคม'
 ];
 
+const THAI_MONTHS_SHORT = [
+  'ม.ค.',
+  'ก.พ.',
+  'มี.ค.',
+  'เม.ย.',
+  'พ.ค.',
+  'มิ.ย.',
+  'ก.ค.',
+  'ส.ค.',
+  'ก.ย.',
+  'ต.ค.',
+  'พ.ย.',
+  'ธ.ค.'
+];
+
+const MS_IN_DAY = 24 * 60 * 60 * 1000;
+
 const CLINICAL_SEVERITY_RANK = {
   A: 1,
   B: 2,
@@ -31,6 +48,7 @@ const state = {
   incidents: [],
   filtered: [],
   charts: {},
+  trendPeriod: 'month',
   filters: {
     type: 'all',
     department: 'all',
@@ -61,6 +79,8 @@ const elements = {
   sidebarResolved: document.getElementById('sidebarResolved'),
   sidebarOpen: document.getElementById('sidebarOpen'),
   sidebarClinical: document.getElementById('sidebarClinical'),
+  trendRange: document.getElementById('trendRange'),
+  trendSubtitle: document.getElementById('trendSubtitle'),
   filterType: document.getElementById('filterType'),
   filterDepartment: document.getElementById('filterDepartment'),
   filterSeverity: document.getElementById('filterSeverity'),
@@ -319,31 +339,142 @@ function createChart(key, config) {
   state.charts[key] = new Chart(ctx, config);
 }
 
-function getLast12MonthsLabels() {
-  const labels = [];
+function initTrendControls() {
+  if (!elements.trendRange) return;
+  state.trendPeriod = elements.trendRange.value || state.trendPeriod;
+  elements.trendRange.addEventListener('change', (event) => {
+    state.trendPeriod = event.target.value;
+    updateCharts();
+  });
+}
+
+function getTrendSeries(data) {
   const now = new Date();
-  for (let i = 11; i >= 0; i -= 1) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    labels.push(`${THAI_MONTHS[date.getMonth()]} ${date.getFullYear() + 543}`);
+  const period = state.trendPeriod;
+
+  if (period === 'day') {
+    const days = 30;
+    const values = new Array(days).fill(0);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - (days - 1));
+
+    data.forEach((item) => {
+      const date = item.Incident_Date_Obj;
+      if (!date) return;
+      const normalized = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      if (normalized < start || normalized > end) return;
+      const diffDays = Math.round((normalized - start) / MS_IN_DAY);
+      if (diffDays >= 0 && diffDays < values.length) {
+        values[diffDays] += 1;
+      }
+    });
+
+    const labels = values.map((_, index) => {
+      const labelDate = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);
+      const day = labelDate.getDate().toString().padStart(2, '0');
+      return `${day} ${THAI_MONTHS_SHORT[labelDate.getMonth()]}`;
+    });
+
+    return {
+      labels,
+      values,
+      subtitle: `${formatThaiDate(start)} - ${formatThaiDate(end)}`
+    };
   }
-  return labels;
+
+  if (period === 'quarter') {
+    const timeline = [];
+    let currentYear = now.getFullYear();
+    let currentQuarter = Math.floor(now.getMonth() / 3);
+
+    for (let i = 0; i < 4; i += 1) {
+      timeline.push({ year: currentYear, quarter: currentQuarter });
+      currentQuarter -= 1;
+      if (currentQuarter < 0) {
+        currentQuarter = 3;
+        currentYear -= 1;
+      }
+    }
+
+    timeline.reverse();
+
+    const values = new Array(timeline.length).fill(0);
+    const indexMap = new Map();
+    timeline.forEach((periodInfo, index) => {
+      indexMap.set(`${periodInfo.year}-${periodInfo.quarter}`, index);
+    });
+
+    data.forEach((item) => {
+      const date = item.Incident_Date_Obj;
+      if (!date) return;
+      const key = `${date.getFullYear()}-${Math.floor(date.getMonth() / 3)}`;
+      const index = indexMap.get(key);
+      if (index !== undefined) {
+        values[index] += 1;
+      }
+    });
+
+    const labels = timeline.map((periodInfo) => `ไตรมาส ${periodInfo.quarter + 1} / ${periodInfo.year + 543}`);
+    const first = timeline[0];
+    const last = timeline[timeline.length - 1];
+    const subtitle = `ไตรมาส ${first.quarter + 1} ${first.year + 543} - ไตรมาส ${last.quarter + 1} ${last.year + 543}`;
+
+    return { labels, values, subtitle };
+  }
+
+  if (period === 'year') {
+    const currentYear = now.getFullYear();
+    const startYear = currentYear - 4;
+    const labels = [];
+    const values = [];
+
+    for (let year = startYear; year <= currentYear; year += 1) {
+      labels.push(`พ.ศ. ${year + 543}`);
+      values.push(0);
+    }
+
+    data.forEach((item) => {
+      const date = item.Incident_Date_Obj;
+      if (!date) return;
+      const year = date.getFullYear();
+      if (year >= startYear && year <= currentYear) {
+        values[year - startYear] += 1;
+      }
+    });
+
+    return {
+      labels,
+      values,
+      subtitle: `พ.ศ. ${startYear + 543} - ${currentYear + 543}`
+    };
+  }
+
+  const labels = [...THAI_MONTHS];
+  const values = new Array(12).fill(0);
+  const year = now.getFullYear();
+
+  data.forEach((item) => {
+    const date = item.Incident_Date_Obj;
+    if (!date) return;
+    if (date.getFullYear() === year) {
+      values[date.getMonth()] += 1;
+    }
+  });
+
+  return {
+    labels,
+    values,
+    subtitle: `ปี ${year + 543}`
+  };
 }
 
 function updateCharts() {
   const data = state.filtered;
 
-  const trendLabels = getLast12MonthsLabels();
-  const monthlyCounts = new Array(12).fill(0);
-  const now = new Date();
-
-  data.forEach((item) => {
-    const date = item.Incident_Date_Obj;
-    if (!date) return;
-    const diffMonths = (now.getFullYear() - date.getFullYear()) * 12 + (now.getMonth() - date.getMonth());
-    if (diffMonths >= 0 && diffMonths < 12) {
-      monthlyCounts[11 - diffMonths] += 1;
-    }
-  });
+  const { labels: trendLabels, values: trendValues, subtitle: trendSubtitle } = getTrendSeries(data);
+  if (elements.trendSubtitle) {
+    elements.trendSubtitle.textContent = trendSubtitle;
+  }
 
   createChart('trendChart', {
     type: 'line',
@@ -351,7 +482,7 @@ function updateCharts() {
       labels: trendLabels,
       datasets: [{
         label: 'จำนวนเหตุการณ์',
-        data: monthlyCounts,
+        data: trendValues,
         fill: true,
         borderColor: '#5c6cff',
         backgroundColor: 'rgba(92, 108, 255, 0.25)',
@@ -672,6 +803,7 @@ function init() {
   bindLoginEvents();
   handleLogin();
   handleFilters();
+  initTrendControls();
   setupDownload();
   initNavigation();
   loadData();
