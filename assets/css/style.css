@@ -151,11 +151,11 @@ a {
 }
 
 .content {
-    padding: 36px 48px;
+    padding: clamp(24px, 4vw, 48px);
     display: flex;
     flex-direction: column;
     gap: 32px;
-    max-width: calc(1920px - 320px);
+    max-width: min(1200px, 100%);
     width: 100%;
     margin: 0 auto;
 }
@@ -193,8 +193,8 @@ a {
 
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: clamp(16px, 3vw, 24px);
 }
 
 .kpi-card {
