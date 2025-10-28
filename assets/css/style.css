@@ -52,6 +52,9 @@ a {
     display: grid;
     grid-template-columns: 320px 1fr;
     min-height: calc(100vh - 60px);
+    max-width: 1920px;
+    margin: 0 auto;
+    width: 100%;
 }
 
 .sidebar {
@@ -63,6 +66,9 @@ a {
     justify-content: space-between;
     border-top-right-radius: var(--border-radius-xl);
     border-bottom-right-radius: var(--border-radius-xl);
+    max-height: calc(100vh - 60px);
+    position: sticky;
+    top: 30px;
 }
 
 .brand {
@@ -149,6 +155,9 @@ a {
     display: flex;
     flex-direction: column;
     gap: 32px;
+    max-width: calc(1920px - 320px);
+    width: 100%;
+    margin: 0 auto;
 }
 
 .topbar {
@@ -470,6 +479,7 @@ tbody tr:hover {
         position: sticky;
         top: 0;
         z-index: 5;
+        max-height: none;
     }
 
     .nav {
@@ -493,6 +503,34 @@ tbody tr:hover {
 
     .welcome {
         max-width: 100%;
+    }
+}
+
+@media (max-height: 1080px) {
+    .sidebar {
+        padding: 24px 20px;
+        top: 20px;
+    }
+
+    .content {
+        padding: 28px 36px;
+        gap: 24px;
+    }
+
+    .kpi-card,
+    .chart-card,
+    .filters,
+    .data-table,
+    .guide {
+        padding: 20px;
+    }
+
+    .kpi-value {
+        font-size: 32px;
+    }
+
+    .table-wrapper {
+        max-height: 360px;
     }
 }
 
