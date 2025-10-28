@@ -113,23 +113,28 @@ const elements = {
   resetFilters: document.getElementById('resetFilters'),
   downloadCsv: document.getElementById('downloadCsv'),
   categoryExplanations: document.getElementById('categoryExplanations'),
-  sidebarFilters: {
-    container: document.getElementById('sidebarFilters'),
-    groups: {
-      department: {
-        toggle: document.querySelector('[data-filter-group="department"] .sidebar-filter-toggle'),
-        list: document.getElementById('sidebarFilterDepartment')
-      },
-      severity: {
-        toggle: document.querySelector('[data-filter-group="severity"] .sidebar-filter-toggle'),
-        list: document.getElementById('sidebarFilterSeverity')
-      },
-      type: {
-        toggle: document.querySelector('[data-filter-group="type"] .sidebar-filter-toggle'),
-        list: document.getElementById('sidebarFilterType')
+  sidebarFilters: (() => {
+    const container = document.getElementById('sidebarFilters');
+    if (!container) return null;
+
+    return {
+      container,
+      groups: {
+        department: {
+          toggle: document.querySelector('[data-filter-group="department"] .sidebar-filter-toggle'),
+          list: document.getElementById('sidebarFilterDepartment')
+        },
+        severity: {
+          toggle: document.querySelector('[data-filter-group="severity"] .sidebar-filter-toggle'),
+          list: document.getElementById('sidebarFilterSeverity')
+        },
+        type: {
+          toggle: document.querySelector('[data-filter-group="type"] .sidebar-filter-toggle'),
+          list: document.getElementById('sidebarFilterType')
+        }
       }
-    }
-  }
+    };
+  })()
 };
 
 function parseDate(value) {
