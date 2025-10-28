@@ -168,7 +168,7 @@ a {
 }
 
 .welcome {
-    max-width: 60%;
+    max-width: 100%;
 }
 
 .date-label {
@@ -176,20 +176,6 @@ a {
     text-transform: uppercase;
     letter-spacing: 1px;
     color: var(--color-purple-dark);
-}
-
-.profile-card {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    background: rgba(255, 255, 255, 0.55);
-    padding: 18px 24px;
-    border-radius: var(--border-radius-lg);
-    box-shadow: var(--shadow-soft);
-}
-
-.profile-avatar {
-    font-size: 32px;
 }
 
 .timeframe-bar {
