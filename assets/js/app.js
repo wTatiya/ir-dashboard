@@ -30,15 +30,6 @@ const THAI_MONTHS_SHORT = [
 
 const MS_IN_DAY = 24 * 60 * 60 * 1000;
 
-const TODAY = new Date();
-TODAY.setHours(0, 0, 0, 0);
-const DEFAULT_MONTH_SELECTION = { year: TODAY.getFullYear(), month: TODAY.getMonth() };
-const DEFAULT_QUARTER_SELECTION = {
-  year: TODAY.getFullYear(),
-  quarter: Math.floor(TODAY.getMonth() / 3) + 1
-};
-const DEFAULT_YEAR_SELECTION = { year: TODAY.getFullYear() };
-
 const CLINICAL_SEVERITY_RANK = {
   A: 1,
   B: 2,
@@ -58,15 +49,6 @@ const state = {
   filtered: [],
   charts: {},
   trendPeriod: 'month',
-  timeframeType: 'month',
-  timeframeValue: { ...DEFAULT_MONTH_SELECTION },
-  timeframeSelections: {
-    day: new Date(TODAY),
-    month: { ...DEFAULT_MONTH_SELECTION },
-    quarter: { ...DEFAULT_QUARTER_SELECTION },
-    year: { ...DEFAULT_YEAR_SELECTION }
-  },
-  timeframeLabel: '',
   filters: {
     type: 'all',
     department: 'all',
@@ -98,13 +80,6 @@ const elements = {
   sidebarClinical: document.getElementById('sidebarClinical'),
   trendRange: document.getElementById('trendRange'),
   trendSubtitle: document.getElementById('trendSubtitle'),
-  timeframeDisplay: document.getElementById('timeframeDisplay'),
-  timeframeOptions: document.querySelectorAll('.timeframe-option'),
-  timeframeChoices: document.querySelectorAll('.timeframe-choice'),
-  timeframeDayInput: document.getElementById('timeframeDay'),
-  timeframeMonthSelect: document.getElementById('timeframeMonth'),
-  timeframeQuarterSelect: document.getElementById('timeframeQuarter'),
-  timeframeYearSelect: document.getElementById('timeframeYear'),
   filterType: document.getElementById('filterType'),
   filterDepartment: document.getElementById('filterDepartment'),
   filterSeverity: document.getElementById('filterSeverity'),
@@ -188,384 +163,6 @@ function endOfDay(date) {
   const result = new Date(date);
   result.setHours(23, 59, 59, 999);
   return result;
-}
-
-function formatMonthValue(year, month) {
-  const normalizedMonth = Math.min(11, Math.max(0, Number(month) || 0));
-  return `${year}-${(normalizedMonth + 1).toString().padStart(2, '0')}`;
-}
-
-function parseMonthValue(value) {
-  if (!value || typeof value !== 'string') return null;
-  const [yearStr, monthStr] = value.split('-');
-  const year = Number(yearStr);
-  const month = Number(monthStr) - 1;
-  if ([year, month].some((num) => Number.isNaN(num)) || month < 0 || month > 11) return null;
-  return { year, month };
-}
-
-function formatQuarterValue(year, quarter) {
-  const normalizedQuarter = Math.min(4, Math.max(1, Number(quarter) || 1));
-  return `${year}-Q${normalizedQuarter}`;
-}
-
-function parseQuarterValue(value) {
-  if (!value || typeof value !== 'string') return null;
-  const match = value.match(/^(\d{4})-Q([1-4])$/);
-  if (!match) return null;
-  return { year: Number(match[1]), quarter: Number(match[2]) };
-}
-
-function computeTimeframeRange(type, selection) {
-  if (type === 'day') {
-    const base = selection instanceof Date ? new Date(selection) : new Date(TODAY);
-    base.setHours(0, 0, 0, 0);
-    const start = new Date(base);
-    const end = endOfDay(base);
-    return { start, end, label: formatThaiDate(start) };
-  }
-
-  if (type === 'month') {
-    const ref = selection && typeof selection.year === 'number' && typeof selection.month === 'number'
-      ? selection
-      : DEFAULT_MONTH_SELECTION;
-    const start = new Date(ref.year, ref.month, 1);
-    const end = endOfDay(new Date(ref.year, ref.month + 1, 0));
-    return { start, end, label: `${THAI_MONTHS[start.getMonth()]} ${start.getFullYear() + 543}` };
-  }
-
-  if (type === 'quarter') {
-    const ref = selection && typeof selection.year === 'number' && typeof selection.quarter === 'number'
-      ? selection
-      : DEFAULT_QUARTER_SELECTION;
-    const quarter = Math.min(4, Math.max(1, ref.quarter));
-    const startMonth = (quarter - 1) * 3;
-    const start = new Date(ref.year, startMonth, 1);
-    const end = endOfDay(new Date(ref.year, startMonth + 3, 0));
-    return { start, end, label: `ไตรมาส ${quarter}/${ref.year + 543}` };
-  }
-
-  if (type === 'year') {
-    const year = selection && typeof selection.year === 'number'
-      ? selection.year
-      : DEFAULT_YEAR_SELECTION.year;
-    const start = new Date(year, 0, 1);
-    const end = endOfDay(new Date(year, 12, 0));
-    return { start, end, label: `ปี ${year + 543}` };
-  }
-
-  if (type === 'all') {
-    return { start: null, end: null, label: 'ทั้งหมด' };
-  }
-
-  return { start: null, end: null, label: '' };
-}
-
-function updateTimeframeControls() {
-  if (!elements.timeframeOptions || elements.timeframeOptions.length === 0) return;
-  const isCustom = state.timeframeType === 'custom';
-  elements.timeframeOptions.forEach((option) => {
-    const button = option.querySelector('.timeframe-choice');
-    const panel = option.querySelector('.timeframe-panel');
-    const { type } = option.dataset;
-    const isActive = !isCustom && state.timeframeType === type;
-    option.classList.toggle('active', isActive);
-    if (button) {
-      button.classList.toggle('active', isActive);
-      if (type === 'all') {
-        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-      } else {
-        button.setAttribute('aria-expanded', isActive ? 'true' : 'false');
-      }
-    }
-    if (panel) {
-      const shouldShow = isActive && type !== 'all';
-      panel.hidden = !shouldShow;
-    }
-  });
-}
-
-function updateTimeframeDisplay() {
-  if (!elements.timeframeDisplay) return;
-  if (state.timeframeType === 'custom') {
-    const startText = state.filters.startDate ? formatThaiDate(state.filters.startDate) : 'ไม่กำหนด';
-    const endText = state.filters.endDate ? formatThaiDate(state.filters.endDate) : 'ไม่กำหนด';
-    elements.timeframeDisplay.textContent = `กำหนดเอง (${startText} - ${endText})`;
-    return;
-  }
-  const { label } = computeTimeframeRange(state.timeframeType, state.timeframeValue);
-  elements.timeframeDisplay.textContent = label || '-';
-}
-
-function markCustomTimeframe() {
-  state.timeframeType = 'custom';
-  state.timeframeValue = null;
-  state.timeframeLabel = '';
-  updateTimeframeControls();
-  updateTimeframeDisplay();
-}
-
-function ensureTimeframeInputsReflectState() {
-  if (elements.timeframeDayInput) {
-    const daySelection = state.timeframeSelections.day instanceof Date
-      ? state.timeframeSelections.day
-      : new Date(TODAY);
-    elements.timeframeDayInput.value = formatDateInputValue(daySelection);
-  }
-
-  if (elements.timeframeMonthSelect) {
-    const ref = state.timeframeSelections.month || DEFAULT_MONTH_SELECTION;
-    const value = formatMonthValue(ref.year, ref.month);
-    const option = elements.timeframeMonthSelect.querySelector(`option[value="${value}"]`);
-    if (option) {
-      elements.timeframeMonthSelect.value = value;
-    } else if (elements.timeframeMonthSelect.options.length > 0) {
-      elements.timeframeMonthSelect.selectedIndex = 0;
-    }
-  }
-
-  if (elements.timeframeQuarterSelect) {
-    const ref = state.timeframeSelections.quarter || DEFAULT_QUARTER_SELECTION;
-    const value = formatQuarterValue(ref.year, ref.quarter);
-    const option = elements.timeframeQuarterSelect.querySelector(`option[value="${value}"]`);
-    if (option) {
-      elements.timeframeQuarterSelect.value = value;
-    } else if (elements.timeframeQuarterSelect.options.length > 0) {
-      elements.timeframeQuarterSelect.selectedIndex = 0;
-    }
-  }
-
-  if (elements.timeframeYearSelect) {
-    const ref = state.timeframeSelections.year || DEFAULT_YEAR_SELECTION;
-    const value = String(ref.year);
-    const option = elements.timeframeYearSelect.querySelector(`option[value="${value}"]`);
-    if (option) {
-      elements.timeframeYearSelect.value = value;
-    } else if (elements.timeframeYearSelect.options.length > 0) {
-      elements.timeframeYearSelect.selectedIndex = 0;
-    }
-  }
-}
-
-function setTimeframe(type, rawValue) {
-  let selection = null;
-
-  if (type === 'day') {
-    const date = rawValue instanceof Date ? new Date(rawValue) : parseDateInput(rawValue);
-    selection = date ? new Date(date) : new Date(TODAY);
-    selection.setHours(0, 0, 0, 0);
-    state.timeframeSelections.day = new Date(selection);
-  } else if (type === 'month') {
-    const parsed = rawValue && typeof rawValue === 'object' ? rawValue : parseMonthValue(rawValue);
-    selection = parsed ? { year: parsed.year, month: parsed.month } : { ...DEFAULT_MONTH_SELECTION };
-    state.timeframeSelections.month = { ...selection };
-  } else if (type === 'quarter') {
-    const parsed = rawValue && typeof rawValue === 'object' ? rawValue : parseQuarterValue(rawValue);
-    const safe = parsed ? { year: parsed.year, quarter: Math.min(4, Math.max(1, parsed.quarter)) } : { ...DEFAULT_QUARTER_SELECTION };
-    selection = safe;
-    state.timeframeSelections.quarter = { ...selection };
-  } else if (type === 'year') {
-    const year = rawValue && typeof rawValue.year === 'number' ? rawValue.year : Number(rawValue);
-    const safeYear = Number.isNaN(year) ? DEFAULT_YEAR_SELECTION.year : year;
-    selection = { year: safeYear };
-    state.timeframeSelections.year = { ...selection };
-  } else if (type === 'all') {
-    state.timeframeType = 'all';
-    state.timeframeValue = null;
-    state.timeframeLabel = 'ทั้งหมด';
-    state.filters.startDate = null;
-    state.filters.endDate = null;
-    if (elements.filterStart) {
-      elements.filterStart.value = '';
-    }
-    if (elements.filterEnd) {
-      elements.filterEnd.value = '';
-    }
-    ensureTimeframeInputsReflectState();
-    updateTimeframeControls();
-    updateTimeframeDisplay();
-    applyFilters();
-    return;
-  } else {
-    return;
-  }
-
-  const { start, end, label } = computeTimeframeRange(type, selection);
-  state.timeframeType = type;
-  state.timeframeValue = selection;
-  state.timeframeLabel = label;
-  state.filters.startDate = start;
-  state.filters.endDate = end;
-
-  if (elements.filterStart) {
-    elements.filterStart.value = start ? formatDateInputValue(start) : '';
-  }
-
-  if (elements.filterEnd) {
-    const endForInput = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate()) : null;
-    elements.filterEnd.value = endForInput ? formatDateInputValue(endForInput) : '';
-  }
-
-  ensureTimeframeInputsReflectState();
-  updateTimeframeControls();
-  updateTimeframeDisplay();
-  applyFilters();
-}
-
-function populateTimeframeSelect(selectEl, options) {
-  if (!selectEl) return;
-  selectEl.innerHTML = '';
-  options.forEach((option) => {
-    const opt = document.createElement('option');
-    opt.value = option.value;
-    opt.textContent = option.label;
-    selectEl.appendChild(opt);
-  });
-}
-
-function buildMonthOptions(limit = 18) {
-  const options = [];
-  for (let i = 0; i < limit; i += 1) {
-    const ref = new Date(TODAY.getFullYear(), TODAY.getMonth() - i, 1);
-    options.push({
-      value: formatMonthValue(ref.getFullYear(), ref.getMonth()),
-      label: `${THAI_MONTHS[ref.getMonth()]} ${ref.getFullYear() + 543}`
-    });
-  }
-  return options;
-}
-
-function buildQuarterOptions(limit = 8) {
-  const options = [];
-  let { year, quarter } = { ...DEFAULT_QUARTER_SELECTION };
-  for (let i = 0; i < limit; i += 1) {
-    options.push({
-      value: formatQuarterValue(year, quarter),
-      label: `ไตรมาส ${quarter}/${year + 543}`
-    });
-    quarter -= 1;
-    if (quarter === 0) {
-      quarter = 4;
-      year -= 1;
-    }
-  }
-  return options;
-}
-
-function buildYearOptions(limit = 6) {
-  const options = [];
-  let year = DEFAULT_YEAR_SELECTION.year;
-  for (let i = 0; i < limit; i += 1) {
-    options.push({ value: String(year), label: `พ.ศ. ${year + 543}` });
-    year -= 1;
-  }
-  return options;
-}
-
-function initTimeframeControls() {
-  if (!elements.timeframeChoices || elements.timeframeChoices.length === 0) return;
-
-  populateTimeframeSelect(elements.timeframeMonthSelect, buildMonthOptions());
-  populateTimeframeSelect(elements.timeframeQuarterSelect, buildQuarterOptions());
-  populateTimeframeSelect(elements.timeframeYearSelect, buildYearOptions());
-  ensureTimeframeInputsReflectState();
-
-  if (elements.timeframeDayInput) {
-    elements.timeframeDayInput.addEventListener('change', (event) => {
-      const picked = event.target.value ? parseDateInput(event.target.value) : null;
-      const date = picked ? new Date(picked) : new Date(TODAY);
-      date.setHours(0, 0, 0, 0);
-      state.timeframeSelections.day = new Date(date);
-      setTimeframe('day', date);
-    });
-  }
-
-  if (elements.timeframeMonthSelect) {
-    elements.timeframeMonthSelect.addEventListener('change', (event) => {
-      const parsed = parseMonthValue(event.target.value) || { ...DEFAULT_MONTH_SELECTION };
-      state.timeframeSelections.month = { ...parsed };
-      setTimeframe('month', parsed);
-    });
-  }
-
-  if (elements.timeframeQuarterSelect) {
-    elements.timeframeQuarterSelect.addEventListener('change', (event) => {
-      const parsed = parseQuarterValue(event.target.value) || { ...DEFAULT_QUARTER_SELECTION };
-      state.timeframeSelections.quarter = { ...parsed };
-      setTimeframe('quarter', parsed);
-    });
-  }
-
-  if (elements.timeframeYearSelect) {
-    elements.timeframeYearSelect.addEventListener('change', (event) => {
-      const year = Number(event.target.value);
-      const safeYear = Number.isNaN(year) ? DEFAULT_YEAR_SELECTION.year : year;
-      state.timeframeSelections.year = { year: safeYear };
-      setTimeframe('year', { year: safeYear });
-    });
-  }
-
-  elements.timeframeChoices.forEach((button) => {
-    button.addEventListener('click', () => {
-      const option = button.closest('.timeframe-option');
-      if (!option) return;
-      const { type } = option.dataset;
-      if (!type) return;
-
-      if (type === 'all') {
-        if (state.timeframeType !== 'all') {
-          setTimeframe('all');
-        }
-        return;
-      }
-
-      if (type === 'day') {
-        const dayInput = elements.timeframeDayInput;
-        const value = dayInput ? dayInput.value : '';
-        const parsed = value ? parseDateInput(value) : null;
-        const date = parsed ? new Date(parsed) : new Date(state.timeframeSelections.day);
-        setTimeframe('day', date);
-        if (dayInput) {
-          dayInput.focus();
-        }
-        return;
-      }
-
-      if (type === 'month') {
-        const monthSelect = elements.timeframeMonthSelect;
-        const value = monthSelect ? monthSelect.value : '';
-        const parsed = value ? parseMonthValue(value) : state.timeframeSelections.month;
-        setTimeframe('month', parsed);
-        if (monthSelect) {
-          monthSelect.focus();
-        }
-        return;
-      }
-
-      if (type === 'quarter') {
-        const quarterSelect = elements.timeframeQuarterSelect;
-        const value = quarterSelect ? quarterSelect.value : '';
-        const parsed = value ? parseQuarterValue(value) : state.timeframeSelections.quarter;
-        setTimeframe('quarter', parsed);
-        if (quarterSelect) {
-          quarterSelect.focus();
-        }
-        return;
-      }
-
-      if (type === 'year') {
-        const yearSelect = elements.timeframeYearSelect;
-        const value = yearSelect ? yearSelect.value : '';
-        const year = value ? Number(value) : state.timeframeSelections.year.year;
-        setTimeframe('year', { year });
-        if (yearSelect) {
-          yearSelect.focus();
-        }
-      }
-    });
-  });
-
-  setTimeframe('month', state.timeframeSelections.month);
 }
 
 function parseCsv(text) {
@@ -1320,7 +917,6 @@ function handleFilters() {
       startDate.setHours(0, 0, 0, 0);
     }
     state.filters.startDate = startDate;
-    markCustomTimeframe();
     applyFilters();
   });
 
@@ -1330,7 +926,6 @@ function handleFilters() {
       endDate.setHours(23, 59, 59, 999);
     }
     state.filters.endDate = endDate;
-    markCustomTimeframe();
     applyFilters();
   });
 
@@ -1338,15 +933,14 @@ function handleFilters() {
     state.filters.type = 'all';
     state.filters.department = 'all';
     state.filters.severity = 'all';
+    state.filters.startDate = null;
+    state.filters.endDate = null;
     elements.filterType.value = 'all';
     elements.filterDepartment.value = 'all';
     elements.filterSeverity.value = 'all';
-    state.timeframeSelections.day = new Date(TODAY);
-    state.timeframeSelections.month = { ...DEFAULT_MONTH_SELECTION };
-    state.timeframeSelections.quarter = { ...DEFAULT_QUARTER_SELECTION };
-    state.timeframeSelections.year = { ...DEFAULT_YEAR_SELECTION };
-    ensureTimeframeInputsReflectState();
-    setTimeframe('month', state.timeframeSelections.month);
+    elements.filterStart.value = '';
+    elements.filterEnd.value = '';
+    applyFilters();
   });
 }
 
@@ -1518,7 +1112,6 @@ function init() {
   handleLogin();
   handleFilters();
   initSidebarFilters();
-  initTimeframeControls();
   initTrendControls();
   setupDownload();
   initNavigation();
