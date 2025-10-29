@@ -144,8 +144,8 @@
                 <div class="chart-card">
                     <div class="card-header">
                         <div>
-                            <h3>แนวโน้มอุบัติการณ์</h3>
-                            <span class="card-subtitle" id="trendSubtitle">12 เดือนล่าสุด</span>
+                            <h3>แนวโน้มอุบัติการณ์ (คลินิก)</h3>
+                            <span class="card-subtitle" id="trendSubtitleClinical">12 เดือนล่าสุด</span>
                         </div>
                         <div class="card-controls">
                             <label for="trendRange">ช่วงเวลา</label>
@@ -157,22 +157,46 @@
                             </select>
                         </div>
                     </div>
-                    <canvas id="trendChart" aria-label="กราฟแสดงจำนวนอุบัติการณ์ตามช่วงเวลา" role="img"></canvas>
+                    <canvas id="trendChartClinical" aria-label="กราฟแสดงจำนวนอุบัติการณ์คลินิกตามช่วงเวลา" role="img"></canvas>
                 </div>
                 <div class="chart-card">
                     <div class="card-header">
-                        <h3>สัดส่วนระดับความรุนแรง</h3>
-                        <span class="card-subtitle">เปรียบเทียบคลินิกและทั่วไป</span>
+                        <div>
+                            <h3>แนวโน้มอุบัติการณ์ (ทั่วไป)</h3>
+                            <span class="card-subtitle" id="trendSubtitleGeneral">12 เดือนล่าสุด</span>
+                        </div>
                     </div>
-                    <canvas id="severityChart" aria-label="กราฟแสดงสัดส่วนระดับความรุนแรง" role="img"></canvas>
+                    <canvas id="trendChartGeneral" aria-label="กราฟแสดงจำนวนอุบัติการณ์ทั่วไปตามช่วงเวลา" role="img"></canvas>
                 </div>
                 <div class="chart-card">
                     <div class="card-header">
-                        <h3>เหตุการณ์สูงสุดตามหมวด</h3>
+                        <h3>สัดส่วนระดับความรุนแรง (คลินิก)</h3>
+                        <span class="card-subtitle">จำแนกตามระดับอักษร</span>
+                    </div>
+                    <canvas id="severityChartClinical" aria-label="กราฟแสดงสัดส่วนระดับความรุนแรงของเหตุการณ์คลินิก" role="img"></canvas>
+                </div>
+                <div class="chart-card">
+                    <div class="card-header">
+                        <h3>สัดส่วนระดับความรุนแรง (ทั่วไป)</h3>
+                        <span class="card-subtitle">จำแนกตามระดับตัวเลข</span>
+                    </div>
+                    <canvas id="severityChartGeneral" aria-label="กราฟแสดงสัดส่วนระดับความรุนแรงของเหตุการณ์ทั่วไป" role="img"></canvas>
+                </div>
+                <div class="chart-card">
+                    <div class="card-header">
+                        <h3>เหตุการณ์สูงสุดตามหมวด (คลินิก)</h3>
                         <span class="card-subtitle">5 อันดับแรก</span>
                     </div>
-                    <canvas id="categoryChart" aria-label="กราฟแสดงเหตุการณ์สูงสุดตามหมวด" role="img"></canvas>
-                    <div id="categoryExplanations" class="chart-explainer" aria-live="polite"></div>
+                    <canvas id="categoryChartClinical" aria-label="กราฟแสดงเหตุการณ์คลินิกสูงสุดตามหมวด" role="img"></canvas>
+                    <div id="categoryExplanationsClinical" class="chart-explainer" aria-live="polite"></div>
+                </div>
+                <div class="chart-card">
+                    <div class="card-header">
+                        <h3>เหตุการณ์สูงสุดตามหมวด (ทั่วไป)</h3>
+                        <span class="card-subtitle">5 อันดับแรก</span>
+                    </div>
+                    <canvas id="categoryChartGeneral" aria-label="กราฟแสดงเหตุการณ์ทั่วไปสูงสุดตามหมวด" role="img"></canvas>
+                    <div id="categoryExplanationsGeneral" class="chart-explainer" aria-live="polite"></div>
                 </div>
             </section>
 

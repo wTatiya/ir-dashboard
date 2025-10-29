@@ -79,7 +79,8 @@ const elements = {
   sidebarOpen: document.getElementById('sidebarOpen'),
   sidebarClinical: document.getElementById('sidebarClinical'),
   trendRange: document.getElementById('trendRange'),
-  trendSubtitle: document.getElementById('trendSubtitle'),
+  trendSubtitleClinical: document.getElementById('trendSubtitleClinical'),
+  trendSubtitleGeneral: document.getElementById('trendSubtitleGeneral'),
   filterType: document.getElementById('filterType'),
   filterDepartment: document.getElementById('filterDepartment'),
   filterSeverity: document.getElementById('filterSeverity'),
@@ -87,7 +88,8 @@ const elements = {
   filterEnd: document.getElementById('filterEnd'),
   resetFilters: document.getElementById('resetFilters'),
   downloadCsv: document.getElementById('downloadCsv'),
-  categoryExplanations: document.getElementById('categoryExplanations'),
+  categoryExplanationsClinical: document.getElementById('categoryExplanationsClinical'),
+  categoryExplanationsGeneral: document.getElementById('categoryExplanationsGeneral'),
   sidebarFilters: (() => {
     const container = document.getElementById('sidebarFilters');
     if (!container) return null;
@@ -198,13 +200,33 @@ function parseCsv(text) {
   });
 }
 
+function determineIncidentGroup(item) {
+  const harmClinical = (item.Harm_Level_Clinical || '').trim();
+  const harmGeneral = (item.Harm_Level_General || '').trim();
+  if (harmClinical && !harmGeneral) return true;
+  if (harmGeneral && !harmClinical) return false;
+  if (harmClinical || harmGeneral) {
+    return harmClinical.length >= harmGeneral.length;
+  }
+
+  const severityRaw = (item.Severity_Code || '').trim();
+  if (/^\d+$/.test(severityRaw)) return false;
+  if (/^[A-Za-z]$/.test(severityRaw)) return true;
+
+  const typeCode = (item.Incident_Type || '').trim().toUpperCase();
+  if (typeCode.startsWith('GP') || typeCode.startsWith('GO')) return false;
+  if (typeCode.startsWith('CP') || typeCode.startsWith('CS')) return true;
+
+  return false;
+}
+
 function enrichIncidents(records) {
   return records.map((item) => {
     const incidentDate = parseDate(item.Incident_Date);
     const reportDate = parseDate(item.Report_Date);
     const resolutionDate = parseDate(item.Resolution_Date);
     const confirmationDate = parseDate(item.Confirmation_Date);
-    const isClinical = item.Incident_Type.includes('คลินิก');
+    const isClinical = determineIncidentGroup(item);
     const severityRaw = (item.Severity_Code || '').trim();
     const normalizedSeverity = isClinical ? severityRaw.toUpperCase() : severityRaw;
     const severityDisplay = normalizedSeverity || 'ไม่ระบุ';
@@ -305,7 +327,7 @@ const SIDEBAR_FILTER_CONFIG = {
     selectKey: 'filterSeverity',
     getOptionMeta: (item) => {
       const value = getSeverityDisplayValue(item);
-      const label = item.isClinical ? `ระดับ ${value} (คลินิก)` : `ระดับ ${value}`;
+      const label = item.isClinical ? `ระดับ ${value} (คลินิก)` : `ระดับ ${value} (ทั่วไป)`;
       return { value, label };
     },
     sort: (a, b) => {
@@ -566,10 +588,8 @@ function createChart(key, config) {
   state.charts[key] = new Chart(ctx, config);
 }
 
-function updateCategoryDescriptions(categories, descriptions) {
-  if (!elements.categoryExplanations) return;
-
-  const container = elements.categoryExplanations;
+function updateCategoryDescriptions(container, categories, descriptions) {
+  if (!container) return;
   container.innerHTML = '';
 
   const visibleCategories = categories.filter(([name, count]) => {
@@ -743,100 +763,27 @@ function getTrendSeries(data) {
   };
 }
 
-function updateCharts() {
-  const data = state.filtered;
-
-  const { labels: trendLabels, values: trendValues, subtitle: trendSubtitle } = getTrendSeries(data);
-  if (elements.trendSubtitle) {
-    elements.trendSubtitle.textContent = trendSubtitle;
-  }
-
-  createChart('trendChart', {
-    type: 'line',
-    data: {
-      labels: trendLabels,
-      datasets: [{
-        label: 'จำนวนเหตุการณ์',
-        data: trendValues,
-        fill: true,
-        borderColor: '#5c6cff',
-        backgroundColor: 'rgba(92, 108, 255, 0.25)',
-        tension: 0.4,
-        pointBackgroundColor: '#ff7eb3',
-        pointRadius: 6,
-        pointHoverRadius: 8
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => `จำนวน ${ctx.parsed.y} ราย`
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            precision: 0,
-            color: '#2b3a67'
-          }
-        },
-        x: {
-          ticks: {
-            color: '#4a4a68'
-          }
-        }
-      }
-    }
-  });
-
-  const severityGroups = data.reduce((acc, item) => {
+function getSeveritySummary(data) {
+  const groups = data.reduce((acc, item) => {
     const key = getSeverityDisplayValue(item);
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
-  const severityEntries = Object.entries(severityGroups).sort((a, b) => compareSeverityValues(a[0], b[0]));
-  const severityLabels = severityEntries.map(([key]) => key);
-  const severityValues = severityEntries.map(([, value]) => value);
-  if (severityLabels.length === 0) {
-    severityLabels.push('ไม่มีข้อมูล');
-    severityValues.push(0);
+  const entries = Object.entries(groups).sort((a, b) => compareSeverityValues(a[0], b[0]));
+  if (entries.length === 0) {
+    return {
+      labels: ['ไม่มีข้อมูล'],
+      values: [0]
+    };
   }
+  return {
+    labels: entries.map(([key]) => key),
+    values: entries.map(([, value]) => value)
+  };
+}
 
-  const severityPalette = ['#5c6cff', '#ff9f43', '#845ef7', '#2ec4b6', '#ff7eb3', '#ffd166', '#06d6a0'];
-
-  createChart('severityChart', {
-    type: 'doughnut',
-    data: {
-      labels: severityLabels,
-      datasets: [{
-        data: severityValues,
-        backgroundColor: severityLabels.map((_, index) => severityPalette[index % severityPalette.length]),
-        borderWidth: 0
-      }]
-    },
-    options: {
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            color: '#2b3a67'
-          }
-        },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => `ระดับ ${ctx.label}: ${ctx.parsed} ราย`
-          }
-        }
-      }
-    }
-  });
-
-  const categoryDescriptions = data.reduce((acc, item) => {
+function getCategorySummary(data) {
+  const descriptions = data.reduce((acc, item) => {
     const rawCode = (item.Incident_Type || '').trim();
     const code = rawCode || 'ไม่ระบุรหัส';
     if (acc[code]) return acc;
@@ -846,52 +793,177 @@ function updateCharts() {
     return acc;
   }, {});
 
-  const categoryCounts = data.reduce((acc, item) => {
+  const counts = data.reduce((acc, item) => {
     const code = (item.Incident_Type || '').trim() || 'ไม่ระบุรหัส';
     acc[code] = (acc[code] || 0) + 1;
     return acc;
   }, {});
-  const sortedCategories = Object.entries(categoryCounts)
+
+  const categories = Object.entries(counts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
-  if (sortedCategories.length === 0) {
-    sortedCategories.push(['ไม่มีข้อมูล', 0]);
+
+  if (categories.length === 0) {
+    categories.push(['ไม่มีข้อมูล', 0]);
   }
 
-  updateCategoryDescriptions(sortedCategories, categoryDescriptions);
+  return { categories, descriptions };
+}
 
-  createChart('categoryChart', {
-    type: 'bar',
-    data: {
-      labels: sortedCategories.map(([name]) => name),
-      datasets: [{
-        label: 'จำนวนเหตุการณ์',
-        data: sortedCategories.map(([, count]) => count),
-        backgroundColor: ['#ff7eb3', '#ff9f43', '#845ef7', '#2ec4b6', '#5c6cff'],
-        borderRadius: 12,
-        borderSkipped: false
-      }]
+function updateCharts() {
+  const groups = {
+    clinical: state.filtered.filter((item) => item.isClinical),
+    general: state.filtered.filter((item) => !item.isClinical)
+  };
+
+  const trendStyles = {
+    clinical: {
+      borderColor: '#5c6cff',
+      backgroundColor: 'rgba(92, 108, 255, 0.25)'
     },
-    options: {
-      indexAxis: 'y',
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => `${ctx.parsed.x} ราย`
+    general: {
+      borderColor: '#ff9f43',
+      backgroundColor: 'rgba(255, 159, 67, 0.25)'
+    }
+  };
+
+  Object.entries(groups).forEach(([key, groupData]) => {
+    const suffix = key === 'clinical' ? 'Clinical' : 'General';
+    const labelSuffix = key === 'clinical' ? 'คลินิก' : 'ทั่วไป';
+    const { labels, values, subtitle } = getTrendSeries(groupData);
+    const subtitleEl = elements[`trendSubtitle${suffix}`];
+    if (subtitleEl) {
+      subtitleEl.textContent = subtitle;
+    }
+
+    const style = trendStyles[key];
+    createChart(`trendChart${suffix}`, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: `จำนวนเหตุการณ์${labelSuffix}`,
+          data: values,
+          fill: true,
+          borderColor: style.borderColor,
+          backgroundColor: style.backgroundColor,
+          tension: 0.4,
+          pointBackgroundColor: style.borderColor,
+          pointRadius: 6,
+          pointHoverRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} ราย`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              precision: 0,
+              color: '#2b3a67'
+            }
+          },
+          x: {
+            ticks: {
+              color: '#4a4a68'
+            }
           }
         }
+      }
+    });
+  });
+
+  const severityPalettes = {
+    clinical: ['#5c6cff', '#845ef7', '#ff7eb3', '#2ec4b6', '#ffd166', '#06d6a0'],
+    general: ['#ff9f43', '#5c6cff', '#2ec4b6', '#ff7eb3', '#845ef7', '#ffd166']
+  };
+
+  Object.entries(groups).forEach(([key, groupData]) => {
+    const suffix = key === 'clinical' ? 'Clinical' : 'General';
+    const { labels, values } = getSeveritySummary(groupData);
+    const palette = severityPalettes[key];
+    const typeLabel = key === 'clinical' ? 'คลินิก' : 'ทั่วไป';
+
+    createChart(`severityChart${suffix}`, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: labels.map((_, index) => palette[index % palette.length]),
+          borderWidth: 0
+        }]
       },
-      scales: {
-        x: {
-          beginAtZero: true,
-          ticks: { color: '#2b3a67', precision: 0 }
-        },
-        y: {
-          ticks: { color: '#4a4a68' }
+      options: {
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              color: '#2b3a67'
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                if (ctx.label === 'ไม่มีข้อมูล') {
+                  return ctx.parsed ? `${ctx.label}: ${ctx.parsed} ราย` : ctx.label;
+                }
+                return `ระดับ ${ctx.label} (${typeLabel}): ${ctx.parsed} ราย`;
+              }
+            }
+          }
         }
       }
-    }
+    });
+  });
+
+  Object.entries(groups).forEach(([key, groupData]) => {
+    const suffix = key === 'clinical' ? 'Clinical' : 'General';
+    const { categories, descriptions } = getCategorySummary(groupData);
+
+    updateCategoryDescriptions(elements[`categoryExplanations${suffix}`], categories, descriptions);
+
+    createChart(`categoryChart${suffix}`, {
+      type: 'bar',
+      data: {
+        labels: categories.map(([name]) => name),
+        datasets: [{
+          label: 'จำนวนเหตุการณ์',
+          data: categories.map(([, count]) => count),
+          backgroundColor: ['#ff7eb3', '#ff9f43', '#845ef7', '#2ec4b6', '#5c6cff'],
+          borderRadius: 12,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.parsed.x} ราย`
+            }
+          }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: { color: '#2b3a67', precision: 0 }
+          },
+          y: {
+            ticks: { color: '#4a4a68' }
+          }
+        }
+      }
+    });
   });
 }
 
@@ -1033,7 +1105,7 @@ function populateSelectors() {
     if (!value) return;
     if (!severityMap.has(value)) {
       severityMap.set(value, {
-        label: item.isClinical ? `ระดับ ${value} (คลินิก)` : `ระดับ ${value}`,
+        label: item.isClinical ? `ระดับ ${value} (คลินิก)` : `ระดับ ${value} (ทั่วไป)`,
         type: item.isClinical ? 'clinical' : 'general'
       });
     }
