@@ -65,6 +65,38 @@
                 </div>
             </header>
 
+            <section class="filters" aria-label="ตัวกรองข้อมูล">
+                <div class="filter-group">
+                    <label for="filterType">ประเภทอุบัติการณ์</label>
+                    <select id="filterType">
+                        <option value="all">ทั้งหมด</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterDepartment">หน่วยงาน</label>
+                    <select id="filterDepartment">
+                        <option value="all">ทั้งหมด</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterSeverity">ระดับความรุนแรง</label>
+                    <select id="filterSeverity">
+                        <option value="all">ทั้งหมด</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterStart">ตั้งแต่วันที่</label>
+                    <input type="date" id="filterStart">
+                </div>
+                <div class="filter-group">
+                    <label for="filterEnd">ถึงวันที่</label>
+                    <input type="date" id="filterEnd">
+                </div>
+                <div class="filter-group">
+                    <button id="resetFilters" class="btn-secondary">ล้างตัวกรอง</button>
+                </div>
+            </section>
+
             <section class="kpi-grid">
                 <article class="kpi-card gradient-blue">
                     <header>
@@ -141,38 +173,6 @@
                     </div>
                     <canvas id="categoryChart" aria-label="กราฟแสดงเหตุการณ์สูงสุดตามหมวด" role="img"></canvas>
                     <div id="categoryExplanations" class="chart-explainer" aria-live="polite"></div>
-                </div>
-            </section>
-
-            <section class="filters" aria-label="ตัวกรองข้อมูล">
-                <div class="filter-group">
-                    <label for="filterType">ประเภทอุบัติการณ์</label>
-                    <select id="filterType">
-                        <option value="all">ทั้งหมด</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="filterDepartment">หน่วยงาน</label>
-                    <select id="filterDepartment">
-                        <option value="all">ทั้งหมด</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="filterSeverity">ระดับความรุนแรง</label>
-                    <select id="filterSeverity">
-                        <option value="all">ทั้งหมด</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="filterStart">ตั้งแต่วันที่</label>
-                    <input type="date" id="filterStart">
-                </div>
-                <div class="filter-group">
-                    <label for="filterEnd">ถึงวันที่</label>
-                    <input type="date" id="filterEnd">
-                </div>
-                <div class="filter-group">
-                    <button id="resetFilters" class="btn-secondary">ล้างตัวกรอง</button>
                 </div>
             </section>
 
