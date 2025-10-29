@@ -414,7 +414,7 @@ function applyFilters() {
 function updateTableSummary() {
   const total = state.filtered.length;
   const open = state.filtered.filter((item) => !item.isResolved).length;
-  elements.tableSummary.textContent = `แสดง ${formatNumber(total)} รายการ (กำลังติดตาม ${formatNumber(open)} ราย)`;
+  elements.tableSummary.textContent = `แสดง ${formatNumber(total)} รายการ (ยังไม่ปิด ${formatNumber(open)} ราย)`;
 }
 
 function updateSidebarFilters() {
