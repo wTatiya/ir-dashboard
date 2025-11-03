@@ -226,6 +226,8 @@ function enrichIncidents(records) {
     const reportDate = parseDate(item.Report_Date);
     const resolutionDate = parseDate(item.Resolution_Date);
     const confirmationDate = parseDate(item.Confirmation_Date);
+    const location = (item.Location || '').trim();
+    const department = (item.Department || location || '').trim();
     const isClinical = determineIncidentGroup(item);
     const severityRaw = (item.Severity_Code || '').trim();
     const normalizedSeverity = isClinical ? severityRaw.toUpperCase() : severityRaw;
@@ -236,6 +238,8 @@ function enrichIncidents(records) {
 
     return {
       ...item,
+      Department: department,
+      Location: location,
       Incident_Date_Obj: incidentDate,
       Report_Date_Obj: reportDate,
       Resolution_Date_Obj: resolutionDate,
