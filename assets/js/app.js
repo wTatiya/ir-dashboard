@@ -1202,53 +1202,72 @@ document.addEventListener('DOMContentLoaded', init);
 const timeframeSelect = document.getElementById("filterTimeframe");
 
 function setDateRangeFor(timeframe) {
-    const today = new Date();
-    let start, end;
+  const today = new Date();
+  let start;
+  let end;
 
-    switch (timeframe) {
-        case "today":
-            start = new Date(today);
-            end = new Date(today);
-            break;
-        case "week": {
-            const day = today.getDay() || 7; // Sunday=0 -> 7
-            start = new Date(today);
-            start.setDate(today.getDate() - day + 1);
-            end = new Date(today);
-            break;
-        }
-        case "month":
-            start = new Date(today.getFullYear(), today.getMonth(), 1);
-            end = new Date(today);
-            break;
-        case "quarter":
-            const currentMonth = today.getMonth();
-            const quarterStartMonth = currentMonth - (currentMonth % 3);
-            start = new Date(today.getFullYear(), quarterStartMonth, 1);
-            end = new Date(today);
-            break;
-        case "year":
-            start = new Date(today.getFullYear(), 0, 1);
-            end = new Date(today);
-            break;
+  switch (timeframe) {
+    case 'today':
+      start = new Date(today);
+      end = new Date(today);
+      break;
+    case 'week': {
+      const day = today.getDay() || 7; // Sunday=0 -> 7
+      start = new Date(today);
+      start.setDate(today.getDate() - day + 1);
+      end = new Date(today);
+      break;
     }
+    case 'month':
+      start = new Date(today.getFullYear(), today.getMonth(), 1);
+      end = new Date(today);
+      break;
+    case 'quarter': {
+      const currentMonth = today.getMonth();
+      const quarterStartMonth = currentMonth - (currentMonth % 3);
+      start = new Date(today.getFullYear(), quarterStartMonth, 1);
+      end = new Date(today);
+      break;
+    }
+    case 'year':
+      start = new Date(today.getFullYear(), 0, 1);
+      end = new Date(today);
+      break;
+    default:
+      start = null;
+      end = null;
+  }
 
-    const toISO = (d) => d.toISOString().split("T")[0];
-    document.getElementById("filterStart").value = toISO(start);
-    document.getElementById("filterEnd").value = toISO(end);
+  if (!start || !end) {
+    return;
+  }
 
-    // Optionally trigger existing filter logic here, if not already triggered
-    document.getElementById("filterEnd").dispatchEvent(new Event("change"));
+  if (!elements.filterStart || !elements.filterEnd) {
+    return;
+  }
+
+  const normalizedStart = new Date(start);
+  normalizedStart.setHours(0, 0, 0, 0);
+  const normalizedEnd = new Date(end);
+  normalizedEnd.setHours(23, 59, 59, 999);
+
+  state.filters.startDate = normalizedStart;
+  state.filters.endDate = normalizedEnd;
+
+  const toISO = (date) => date.toISOString().split('T')[0];
+  elements.filterStart.value = toISO(normalizedStart);
+  elements.filterEnd.value = toISO(normalizedEnd);
+
+  applyFilters();
 }
 
-timeframeSelect.addEventListener("change", (e) => {
-    setDateRangeFor(e.target.value);
-});
+if (timeframeSelect) {
+  timeframeSelect.addEventListener('change', (event) => {
+    setDateRangeFor(event.target.value);
+  });
+}
 
 // On load, apply default timeframe (week)
-window.addEventListener("DOMContentLoaded", () => {
-    setDateRangeFor("week");
+window.addEventListener('DOMContentLoaded', () => {
+  setDateRangeFor('week');
 });
-
-document.getElementById("filterStart").addEventListener("change", applyFilters);
-document.getElementById("filterEnd").addEventListener("change", applyFilters);
