@@ -1005,6 +1005,9 @@ function handleFilters() {
       startDate.setHours(0, 0, 0, 0);
     }
     state.filters.startDate = startDate;
+    if (timeframeSelect) {
+      timeframeSelect.value = 'all';
+    }
     applyFilters();
   });
 
@@ -1014,6 +1017,9 @@ function handleFilters() {
       endDate.setHours(23, 59, 59, 999);
     }
     state.filters.endDate = endDate;
+    if (timeframeSelect) {
+      timeframeSelect.value = 'all';
+    }
     applyFilters();
   });
 
@@ -1028,6 +1034,9 @@ function handleFilters() {
     elements.filterSeverity.value = 'all';
     elements.filterStart.value = '';
     elements.filterEnd.value = '';
+    if (timeframeSelect) {
+      timeframeSelect.value = 'all';
+    }
     applyFilters();
   });
 }
@@ -1214,11 +1223,23 @@ document.addEventListener('DOMContentLoaded', init);
 const timeframeSelect = document.getElementById("filterTimeframe");
 
 function setDateRangeFor(timeframe) {
+  if (timeframeSelect) {
+    timeframeSelect.value = timeframe;
+  }
   const today = new Date();
   let start;
   let end;
 
   switch (timeframe) {
+    case 'all':
+      if (elements.filterStart && elements.filterEnd) {
+        elements.filterStart.value = '';
+        elements.filterEnd.value = '';
+      }
+      state.filters.startDate = null;
+      state.filters.endDate = null;
+      applyFilters();
+      return;
     case 'today':
       start = new Date(today);
       end = new Date(today);
