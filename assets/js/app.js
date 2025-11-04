@@ -169,7 +169,14 @@ function endOfDay(date) {
 
 function parseCsv(text) {
   const lines = text.trim().split(/\r?\n/);
-  const headers = lines.shift().split(',');
+  if (lines.length === 0) return [];
+
+  let headerLine = lines.shift();
+  while (lines.length > 0 && /^,/.test(lines[0])) {
+    headerLine += lines.shift();
+  }
+
+  const headers = headerLine.split(',').map((header) => header.trim());
   return lines.filter((line) => line.trim().length > 0).map((line) => {
     const cells = [];
     let current = '';
@@ -194,7 +201,8 @@ function parseCsv(text) {
 
     const record = {};
     headers.forEach((header, index) => {
-      record[header.trim()] = (cells[index] ?? '').trim();
+      if (!header) return;
+      record[header] = (cells[index] ?? '').trim();
     });
     return record;
   });
@@ -213,7 +221,7 @@ function determineIncidentGroup(item) {
   if (/^\d+$/.test(severityRaw)) return false;
   if (/^[A-Za-z]$/.test(severityRaw)) return true;
 
-  const typeCode = (item.Incident_Type || '').trim().toUpperCase();
+  const typeCode = (item.Incident_Type || item.Incident_Type_Code || '').trim().toUpperCase();
   if (typeCode.startsWith('GP') || typeCode.startsWith('GO')) return false;
   if (typeCode.startsWith('CP') || typeCode.startsWith('CS')) return true;
 
@@ -222,6 +230,8 @@ function determineIncidentGroup(item) {
 
 function enrichIncidents(records) {
   return records.map((item) => {
+    const incidentTypeCode = (item.Incident_Type_Code || '').trim();
+    const incidentType = incidentTypeCode || (item.Incident_Type || '').trim();
     const incidentDate = parseDate(item.Incident_Date);
     const reportDate = parseDate(item.Report_Date);
     const resolutionDate = parseDate(item.Resolution_Date);
@@ -238,6 +248,8 @@ function enrichIncidents(records) {
 
     return {
       ...item,
+      Incident_Type: incidentType,
+      Incident_Type_Code: incidentTypeCode || incidentType,
       Department: department,
       Location: location,
       Incident_Date_Obj: incidentDate,
