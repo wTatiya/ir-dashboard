@@ -7,3 +7,9 @@ https://wtatiya.github.io/ir-dashboard/
 | Low or no budget           | Open-source tools only (Playwright, GitHub API, etc.)                      |
 | Static login               | We’ll use **Playwright headless browser** to log in with username/password |
 | GitHub automation needed   | We'll use **GitHub REST API** to push changes and open PRs                 |
+
+# Colab DataTables Scraper (Playwright, Async)
+
+- Add `src/scraper/playwright_runner_async.py` and `src/scraper/github_push.py` to your repo.
+- Open the provided Colab notebook and run the first cell.
+- CSV is written to `output/incidents.csv`. Optional push back to GitHub is supported.
