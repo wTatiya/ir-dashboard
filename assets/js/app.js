@@ -1175,26 +1175,57 @@ function bindLoginEvents() {
     elements.loginOverlay.setAttribute('aria-hidden', 'false');
   });
 }
+function parseCsv(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (!lines.length) return [];
+  const headers = lines[0].split(",").map(h => h.trim());
+  const out = [];
+  for (let i = 1; i < lines.length; i++) {
+    const row = [];
+    let cur = "", inQ = false;
+    for (let j = 0; j < lines[i].length; j++) {
+      const c = lines[i][j];
+      if (c === '"' && lines[i][j+1] === '"') { cur += '"'; j++; continue; }
+      if (c === '"') { inQ = !inQ; continue; }
+      if (c === "," && !inQ) { row.push(cur); cur = ""; continue; }
+      cur += c;
+    }
+    row.push(cur);
+    const obj = {};
+    headers.forEach((h, idx) => obj[h] = row[idx] ?? "");
+    out.push(obj);
+  }
+  return out;
+}
 
 async function loadData() {
   try {
-    const res = await fetch(API_URL, { credentials: "include" }); // include if using Cloudflare Access
-    if (!res.ok) throw new Error(`API ${res.status}`);
-    const records = await res.json(); // array of row objects matching your CSV headers
+    let records;
+
+    if (typeof API_URL !== "undefined" && API_URL) {
+      // JSON backend path (only if you host an API)
+      const res = await fetch(API_URL, { credentials: "include" });
+      if (!res.ok) throw new Error(`API ${res.status}`);
+      records = await res.json();
+    } else {
+      // Static GitHub Pages path: load CSV from the repo
+      const res = await fetch("data/incidents.csv", { cache: "no-store" });
+      if (!res.ok) throw new Error(`CSV ${res.status}`);
+      const text = await res.text();
+      records = parseCsv(text); // shape matches your CSV headers
+    }
 
     const incidents = enrichIncidents(records);
     incidents.sort((a, b) => (b.Incident_Date_Obj || 0) - (a.Incident_Date_Obj || 0));
     state.incidents = incidents;
     state.filtered = incidents;
-
-    populateSelectors();
-    applyFilters();
-    displayDataRefreshDate();
-  } catch (error) {
-    console.error("ไม่สามารถโหลดข้อมูลได้", error);
-    elements.tableSummary.textContent = "เกิดข้อผิดพลาดในการโหลดข้อมูล";
+    renderAll();
+  } catch (err) {
+    console.error(err);
+    // Consider showing a small banner in the UI if loading fails
   }
 }
+
 
 function initNavigation() {
   const navLinks = document.querySelectorAll('.nav-item');
