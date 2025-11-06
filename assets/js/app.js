@@ -1178,19 +1178,21 @@ function bindLoginEvents() {
 
 async function loadData() {
   try {
-    const response = await fetch('data/incidents.csv');
-    const text = await response.text();
-    const records = parseCsv(text);
+    const res = await fetch(API_URL, { credentials: "include" }); // include if using Cloudflare Access
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    const records = await res.json(); // array of row objects matching your CSV headers
+
     const incidents = enrichIncidents(records);
     incidents.sort((a, b) => (b.Incident_Date_Obj || 0) - (a.Incident_Date_Obj || 0));
     state.incidents = incidents;
     state.filtered = incidents;
+
     populateSelectors();
     applyFilters();
     displayDataRefreshDate();
   } catch (error) {
-    console.error('ไม่สามารถโหลดข้อมูลได้', error);
-    elements.tableSummary.textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล';
+    console.error("ไม่สามารถโหลดข้อมูลได้", error);
+    elements.tableSummary.textContent = "เกิดข้อผิดพลาดในการโหลดข้อมูล";
   }
 }
 
