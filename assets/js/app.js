@@ -1,6 +1,6 @@
 // IR Dashboard front-end logic
 // Fetches CSV if present. Falls back to demo data.
-// Renders 1) KPIs 2) trend line 3) donut 4) table 5) mini calendar
+// Renders 1) KPIs 2) trend line 3) donut 4) table
 
 function csvToJSON(csv) {
   const [header, ...rows] = csv.trim().split(/\r?\n/);
@@ -104,19 +104,6 @@ function fillTable(items){
   });
 }
 
-function miniCalendar(){
-  const wrap = document.getElementById('calendar');
-  wrap.innerHTML='';
-  for(let i=1;i<=15;i++){
-    const d = document.createElement('div');
-    d.className='day';
-    d.textContent = i;
-    wrap.appendChild(d);
-  }
-  const upcoming = document.getElementById('upcomingList');
-  upcoming.innerHTML = '<li>Heart Surgery · 10 AM - 1 PM · OR</li><li>Laser Surgery · 10 AM - 10 Apr</li>';
-}
-
 // Simple search filter for table
 function wireSearch(items){
   const input = document.getElementById('tableSearch');
@@ -136,5 +123,4 @@ function wireSearch(items){
   buildDonut(items);
   fillTable(items);
   wireSearch(items);
-  miniCalendar();
 })();
