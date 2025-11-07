@@ -105,6 +105,9 @@ body {
 
 .sidebar-bottom { margin-top: auto; }
 .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid rgba(156, 136, 231, 0.45);
   background: rgba(255, 255, 255, 0.6);
   color: var(--text);
@@ -114,6 +117,9 @@ body {
   font-weight: 600;
   transition: all 0.2s ease;
   box-shadow: var(--shadow);
+  text-decoration: none;
+  line-height: 1.1;
+  gap: 6px;
 }
 .btn:hover { transform: translateY(-1px); }
 .btn-ghost { background: rgba(255, 255, 255, 0.35); box-shadow: none; }
@@ -200,9 +206,29 @@ body {
   color: var(--text);
   box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.5);
 }
-.donut-wrap { position: relative; height: 260px; }
-.donut-center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--text); }
-.donut-center span { font-size: 26px; font-weight: 800; }
+.donut-wrap {
+  position: relative;
+  height: 260px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+.donut-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--text);
+  pointer-events: none;
+}
+.donut-center span { font-size: 26px; font-weight: 800; line-height: 1; margin-bottom: 2px; }
+.legend li strong { min-width: 3ch; text-align: right; }
 .legend { list-style: none; padding: 0; margin: 16px 0 0; }
 .legend li { display: flex; justify-content: space-between; color: var(--text-soft); margin: 6px 0; gap: 12px; align-items: center; }
 .legend .dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 0 6px rgba(154, 102, 255, 0.12); }
@@ -234,6 +260,9 @@ th, td {
   border-bottom: 1px solid rgba(169, 157, 219, 0.18);
   text-align: left;
   color: var(--text-soft);
+}
+#dataTable td:last-child {
+  text-align: center;
 }
 tr:hover td { background: rgba(173, 211, 255, 0.18); color: var(--text); }
 
