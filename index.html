@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IR Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-dt/css/jquery.dataTables.min.css">
+  <style>
+    body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Thai","Noto Sans",sans-serif;margin:16px}
+    h1{font-size:20px;margin:0 0 8px}
+    #meta{font-size:12px;color:#555;margin-bottom:12px}
+    #err{color:#b00020;white-space:pre-wrap;margin:.5rem 0;display:none}
+    table.dataTable thead th{white-space:nowrap}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/datatables.net@2.1.8/js/dataTables.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <h1>Incident Reports</h1>
+  <div id="meta">Rows: <span id="rows">0</span> • Updated: <span id="updated">-</span></div>
+  <div id="err"></div>
+  <table id="tbl" class="display" style="width:100%"></table>
+
+<script>
+(function(){
+  const EXPECTED = ["Incident_ID","Incident_Type","Incident_Type_Details","Location","Related_Location",
+                    "Severity_Code","Harm_Level","Incident_Status","Incident_Date","Discovery_Date",
+                    "Report_Date","Confirmation_Date","Notification_Date","Status_Date","Resolution_Date"];
+  const showErr = (e)=>{ const el=document.getElementById('err'); el.textContent=String(e); el.style.display='block'; };
+  const toISO = (ddmmyyyy)=>{
+    if(!ddmmyyyy || ddmmyyyy==='-') return '';
+    const p = ddmmyyyy.split('/'); if(p.length!==3) return '';
+    const [d,m,y] = p; return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  };
+  (async ()=>{
+    try{
+      const url = 'data/incidents.csv?v=' + Date.now();
+      const res = await fetch(url, {cache:'no-store'});
+      if(!res.ok) throw new Error(`Fetch ${res.status} ${res.statusText}`);
+      const text = await res.text();
+      const lastMod = res.headers.get('last-modified') || '-';
+      const parsed = Papa.parse(text, {header:true, skipEmptyLines:true, dynamicTyping:false});
+      if(parsed.errors && parsed.errors.length) console.warn('Papa errors:', parsed.errors);
+
+      let data = parsed.data || [];
+      // ensure columns
+      for(const row of data){ for(const k of EXPECTED){ if(!(k in row)) row[k] = row[k] ?? ""; } }
+      // add sort keys
+      data = data.map(r => ({...r, _sort_report: toISO(r["Report_Date"]), _sort_status: toISO(r["Status_Date"])}));
+      // columns
+      const cols = EXPECTED.map(c => ({ title: c.replaceAll('_',' '), data: c }));
+      // init
+      new DataTable('#tbl', {
+        data, columns: cols,
+        order: [[10,'desc']], // Report_Date
+        pageLength: 25,
+        responsive: true
+      });
+      document.getElementById('rows').textContent = data.length;
+      document.getElementById('updated').textContent = lastMod;
+    }catch(e){ showErr(e); }
+  })();
+})();
+</script>
+</body>
+</html>
