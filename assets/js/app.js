@@ -1175,29 +1175,6 @@ function bindLoginEvents() {
     elements.loginOverlay.setAttribute('aria-hidden', 'false');
   });
 }
-function parseCsv(text) {
-  const lines = text.trim().split(/\r?\n/);
-  if (!lines.length) return [];
-  const headers = lines[0].split(",").map(h => h.trim());
-  const out = [];
-  for (let i = 1; i < lines.length; i++) {
-    const row = [];
-    let cur = "", inQ = false;
-    for (let j = 0; j < lines[i].length; j++) {
-      const c = lines[i][j];
-      if (c === '"' && lines[i][j+1] === '"') { cur += '"'; j++; continue; }
-      if (c === '"') { inQ = !inQ; continue; }
-      if (c === "," && !inQ) { row.push(cur); cur = ""; continue; }
-      cur += c;
-    }
-    row.push(cur);
-    const obj = {};
-    headers.forEach((h, idx) => obj[h] = row[idx] ?? "");
-    out.push(obj);
-  }
-  return out;
-}
-
 async function loadData() {
   try {
     let records;
