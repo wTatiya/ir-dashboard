@@ -1,67 +1,149 @@
-<!doctype html>
-<html lang="th">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>IR Dashboard</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-dt/css/jquery.dataTables.min.css">
-  <style>
-    body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Thai","Noto Sans",sans-serif;margin:16px}
-    h1{font-size:20px;margin:0 0 8px}
-    #meta{font-size:12px;color:#555;margin-bottom:12px}
-    #err{color:#b00020;white-space:pre-wrap;margin:.5rem 0;display:none}
-    table.dataTable thead th{white-space:nowrap}
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/datatables.net@2.1.8/js/dataTables.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="assets/js/app.js" type="module" defer></script>
 </head>
 <body>
-  <h1>Incident Reports</h1>
-  <div id="meta">Rows: <span id="rows">0</span> • Updated: <span id="updated">-</span></div>
-  <div id="err"></div>
-  <table id="tbl" class="display" style="width:100%"></table>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">IR</div>
+      <div class="brand-txt">
+        <h1>LifeCare</h1>
+        <p>Hospital Incident Dashboard</p>
+      </div>
+    </div>
+    <nav class="nav">
+      <a class="nav-item active" href="#dashboard">
+        <span class="nav-dot"></span> Dashboard
+      </a>
+      <a class="nav-item" href="#analytics"><span class="nav-dot"></span> Analytics</a>
+      <a class="nav-item" href="#table"><span class="nav-dot"></span> Incidents</a>
+      <a class="nav-item" href="#settings"><span class="nav-dot"></span> Settings</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <button id="logoutBtn" class="btn btn-ghost">Log Out</button>
+    </div>
+  </aside>
 
-<script>
-(function(){
-  const EXPECTED = ["Incident_ID","Incident_Type","Incident_Type_Details","Location","Related_Location",
-                    "Severity_Code","Harm_Level","Incident_Status","Incident_Date","Discovery_Date",
-                    "Report_Date","Confirmation_Date","Notification_Date","Status_Date","Resolution_Date"];
-  const showErr = (e)=>{ const el=document.getElementById('err'); el.textContent=String(e); el.style.display='block'; };
-  const toISO = (ddmmyyyy)=>{
-    if(!ddmmyyyy || ddmmyyyy==='-') return '';
-    const p = ddmmyyyy.split('/'); if(p.length!==3) return '';
-    const [d,m,y] = p; return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
-  };
-  (async ()=>{
-    try{
-      const url = 'data/incidents.csv?v=' + Date.now();
-      const res = await fetch(url, {cache:'no-store'});
-      if(!res.ok) throw new Error(`Fetch ${res.status} ${res.statusText}`);
-      const text = await res.text();
-      const lastMod = res.headers.get('last-modified') || '-';
-      const parsed = Papa.parse(text, {header:true, skipEmptyLines:true, dynamicTyping:false});
-      if(parsed.errors && parsed.errors.length) console.warn('Papa errors:', parsed.errors);
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h2 id="helloUser">Hello, Admin</h2>
+        <p class="subtitle">Welcome to the Hospital Management Dashboard.</p>
+      </div>
+      <div class="search">
+        <input id="searchBox" type="search" placeholder="Search anything">
+      </div>
+      <div class="user">
+        <div class="avatar">NH</div>
+        <div class="user-meta">
+          <strong>Name Here</strong>
+          <small>Admin</small>
+        </div>
+      </div>
+    </header>
 
-      let data = parsed.data || [];
-      // ensure columns
-      for(const row of data){ for(const k of EXPECTED){ if(!(k in row)) row[k] = row[k] ?? ""; } }
-      // add sort keys
-      data = data.map(r => ({...r, _sort_report: toISO(r["Report_Date"]), _sort_status: toISO(r["Status_Date"])}));
-      // columns
-      const cols = EXPECTED.map(c => ({ title: c.replaceAll('_',' '), data: c }));
-      // init
-      new DataTable('#tbl', {
-        data, columns: cols,
-        order: [[10,'desc']], // Report_Date
-        pageLength: 25,
-        responsive: true
-      });
-      document.getElementById('rows').textContent = data.length;
-      document.getElementById('updated').textContent = lastMod;
-    }catch(e){ showErr(e); }
-  })();
-})();
-</script>
+    <section class="kpi-row" id="dashboard">
+      <article class="kpi-card">
+        <header>Total Incidents</header>
+        <div class="kpi-value" id="kpiTotal">0</div>
+        <footer><span id="kpiTotalDelta">—</span></footer>
+      </article>
+      <article class="kpi-card">
+        <header>Clinical</header>
+        <div class="kpi-value" id="kpiClinical">0</div>
+        <footer><span id="kpiClinicalDelta">—</span></footer>
+      </article>
+      <article class="kpi-card">
+        <header>General</header>
+        <div class="kpi-value" id="kpiGeneral">0</div>
+        <footer><span id="kpiGeneralDelta">—</span></footer>
+      </article>
+      <article class="kpi-card">
+        <header>Resolved</header>
+        <div class="kpi-value" id="kpiResolved">0</div>
+        <footer><span id="kpiResolvedRate">—</span></footer>
+      </article>
+    </section>
+
+    <section class="grid-3">
+      <div class="card">
+        <div class="card-header">
+          <h3>Patients Statistics</h3>
+          <select id="statRange">
+            <option value="m">Monthly</option>
+            <option value="q">Quarterly</option>
+            <option value="y">Yearly</option>
+          </select>
+        </div>
+        <canvas id="trendLine" aria-label="Incidents trend" role="img"></canvas>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Total Expense</h3>
+          <input id="refDate" type="date">
+        </div>
+        <div class="donut-wrap">
+          <canvas id="donut" aria-label="Severity share" role="img"></canvas>
+          <div class="donut-center"><span id="donutPct">0%</span><small>Earnings</small></div>
+        </div>
+        <ul class="legend">
+          <li><span class="dot"></span>Revenue <strong id="lgRevenue">0%</strong></li>
+          <li><span class="dot"></span>Expense <strong id="lgExpense">0%</strong></li>
+          <li><span class="dot"></span>Other <strong id="lgOther">0%</strong></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Schedule</h3>
+          <div class="schedule-month" id="schedMonth">April 2024</div>
+        </div>
+        <div id="calendar" class="calendar" role="grid" aria-label="Mini calendar"></div>
+        <div class="schedule">
+          <h4>Upcoming</h4>
+          <ul id="upcomingList"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="table">
+      <div class="card-header">
+        <h3>Patients Management</h3>
+        <div class="actions">
+          <input id="tableSearch" class="input" type="search" placeholder="search patients name, id">
+          <button class="btn btn-primary" id="advFilter">Advance Filter</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="dataTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Admit</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <small>&copy; 2025 — IR Dashboard</small>
+    </footer>
+  </main>
 </body>
 </html>

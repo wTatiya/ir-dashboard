@@ -1,16 +1,14 @@
-# ir-dashboard
-https://wtatiya.github.io/ir-dashboard/
+# IR GitHub Pages Dashboard
 
+This package gives you a static dashboard that mirrors the provided UI mock. It works on GitHub Pages with no build step.
 
-# Colab DataTables Scraper (Playwright, Async)
+## Deploy
+1. Extract this zip into the root of your repo (replace existing `index.html`, `assets/`, and `data/`).
+2. Commit and push to GitHub. If Pages is enabled from the main branch, it will go live automatically.
+3. Keep your processed CSV at `data/incidents.csv` with headers matching your schema.
 
-- Add `src/scraper/playwright_runner_async.py` and `src/scraper/github_push.py` to your repo.
-- Open the provided Colab notebook and run the first cell.
-- CSV is written to `output/incidents.csv`. Optional push back to GitHub is supported.
+## CSV columns
+Expected columns:
+`Incident_ID,Incident_Type,Incident_Type_Details,Location,Related_Location,Severity_Code,Harm_Level,Incident_Status,Incident_Date,Report_Date,Confirmation_Date,Resolution_Date`
 
-## CSV schema
-```
-Incident_ID,Incident_Type,Incident_Type_Details,Location,Related_Location,
-Severity_Code,Harm_Level,Incident_Status,
-Incident_Date,Discovery_Date,Report_Date,Confirmation_Date,
-Notification_Date,Status_Date,Resolution_Date
+If the CSV is missing, the page will render demo data.
