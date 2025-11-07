@@ -1,15 +1,16 @@
 # ir-dashboard
 https://wtatiya.github.io/ir-dashboard/
-| Constraint                 | Solution                                                                   |
-| -------------------------- | -------------------------------------------------------------------------- |
-| No admin rights / installs | Use **Google Colab** (runs in browser, no install needed)                  |
-| Little coding experience   | I’ll give you a **plug-and-play script** with clear comments               |
-| Low or no budget           | Open-source tools only (Playwright, GitHub API, etc.)                      |
-| Static login               | We’ll use **Playwright headless browser** to log in with username/password |
-| GitHub automation needed   | We'll use **GitHub REST API** to push changes and open PRs                 |
+
 
 # Colab DataTables Scraper (Playwright, Async)
 
 - Add `src/scraper/playwright_runner_async.py` and `src/scraper/github_push.py` to your repo.
 - Open the provided Colab notebook and run the first cell.
 - CSV is written to `output/incidents.csv`. Optional push back to GitHub is supported.
+
+## CSV schema
+```
+Incident_ID,Incident_Type,Incident_Type_Details,Location,Related_Location,
+Severity_Code,Harm_Level,Incident_Status,
+Incident_Date,Discovery_Date,Report_Date,Confirmation_Date,
+Notification_Date,Status_Date,Resolution_Date
