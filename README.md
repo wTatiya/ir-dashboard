@@ -1,6 +1,6 @@
 # IR Dashboard on Cloudflare Pages
 
-This repository hosts the static Interactive Reports (IR) dashboard. The project is configured for deployment on Cloudflare Pages and now also includes a minimal Worker wrapper so environments that call `wrangler deploy` (instead of the Pages-specific `wrangler pages deploy`) succeed.
+This repository hosts the static Interactive Reports (IR) dashboard. The project is configured for deployment on Cloudflare Pages and now also includes a minimal Worker wrapper so environments that call `wrangler deploy` (instead of the Pages-specific `wrangler pages deploy`) succeed. The `wrangler.toml` file sets `pages_build_output_dir = "."` so `wrangler pages deploy` can consume the configuration without warning.
 
 ## Local preview
 
