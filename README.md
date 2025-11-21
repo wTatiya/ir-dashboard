@@ -1,6 +1,6 @@
 # IR Dashboard on Cloudflare Pages
 
-This repository hosts the static Interactive Reports (IR) dashboard. The project is now configured for deployment on Cloudflare Pages.
+This repository hosts the static Interactive Reports (IR) dashboard. The project is configured for deployment on Cloudflare Pages and now also includes a minimal Worker wrapper so environments that call `wrangler deploy` (instead of the Pages-specific `wrangler pages deploy`) succeed.
 
 ## Local preview
 
@@ -17,9 +17,11 @@ npm run dev
 
 1. Push the repository to GitHub or another Git provider connected to Cloudflare.
 2. In the Cloudflare dashboard, create a **Pages** project and select this repository.
-3. Set the **Build command** to `npm run deploy` (or `npx wrangler pages deploy .`) so the Pages-specific deploy command is used. **Do not** use `wrangler deploy`, which targets Workers and will fail for this Pages project.
+3. Set the **Build command** to `npm run deploy` (or `npx wrangler pages deploy .`) so the Pages-specific deploy command is used.
 4. Set the **Build output directory** to `.` (the project is already pre-built).
 5. Trigger a deployment; Cloudflare Pages will serve `index.html` and the static assets under `assets/` and `data/`.
+
+If your CI/CD platform insists on running `wrangler deploy` (a Workers-only command), the included `worker.js` and `wrangler.toml` configuration will deploy the static assets through the Workers Assets feature instead of failing. Pages deployments remain the preferred option, but both commands will now produce a working site.
 
 ### GitHub Actions deployment
 
