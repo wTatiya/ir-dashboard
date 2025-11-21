@@ -23,6 +23,22 @@ npm run dev
 
 If your CI/CD platform insists on running `wrangler deploy` (a Workers-only command), the included `worker.js` and `wrangler.toml` configuration will deploy the static assets through the Workers Assets feature instead of failing. Pages deployments remain the preferred option, but both commands will now produce a working site.
 
+### Custom CI pipelines
+
+If you are using a CI provider other than GitHub Actions, make sure the deploy step runs the Pages-specific command instead of `wrangler deploy`:
+
+```bash
+npm run deploy -- --project-name "$CLOUDFLARE_PROJECT_NAME"
+```
+
+Provide the same environment variables used in `.github/workflows/deploy.yml` so authentication and targeting behave identically:
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_API_TOKEN` (with Pages deploy permissions)
+- `CLOUDFLARE_PROJECT_NAME`
+
+With those values set, the pipeline will deploy the repository contents through Cloudflare Pages successfully.
+
 ### GitHub Actions deployment
 
 This repository includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that deploys the current branch to Cloudflare Pages using the correct `wrangler pages deploy` command. To enable it, add these repository secrets:
