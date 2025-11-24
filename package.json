@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "wrangler pages dev .",
-    "deploy": "wrangler pages deploy ."
+    "deploy": "wrangler pages deploy . --config wrangler.pages.toml"
   },
   "devDependencies": {
     "wrangler": "^4.50.0"

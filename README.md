@@ -1,6 +1,6 @@
 # IR Dashboard on Cloudflare Pages
 
-This repository hosts the static Interactive Reports (IR) dashboard. The project is configured for deployment on Cloudflare Pages and now also includes a minimal Worker wrapper so environments that call `wrangler deploy` (instead of the Pages-specific `wrangler pages deploy`) succeed. The `wrangler.toml` file sets `pages_build_output_dir = "."` so `wrangler pages deploy` can consume the configuration without warning.
+This repository hosts the static Interactive Reports (IR) dashboard. The project is configured for deployment on Cloudflare Pages and now also includes a minimal Worker wrapper so environments that call `wrangler deploy` (instead of the Pages-specific `wrangler pages deploy`) succeed. The Pages-specific settings live in `wrangler.pages.toml`, leaving `wrangler.toml` free for Worker/Assets deployments.
 
 ## Local preview
 
@@ -17,7 +17,7 @@ npm run dev
 
 1. Push the repository to GitHub or another Git provider connected to Cloudflare.
 2. In the Cloudflare dashboard, create a **Pages** project and select this repository.
-3. Set the **Build command** to `npm run deploy` (or `npx wrangler pages deploy .`) so the Pages-specific deploy command is used.
+3. Set the **Build command** to `npm run deploy` (or `npx wrangler pages deploy . --config wrangler.pages.toml`) so the Pages-specific deploy command and config file are used.
 4. Set the **Build output directory** to `.` (the project is already pre-built).
 5. Trigger a deployment; Cloudflare Pages will serve `index.html` and the static assets under `assets/` and `data/`.
 
@@ -41,7 +41,7 @@ With those values set, the pipeline will deploy the repository contents through 
 
 ### GitHub Actions deployment
 
-This repository includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that deploys the current branch to Cloudflare Pages using the correct `wrangler pages deploy` command. To enable it, add these repository secrets:
+This repository includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that deploys the current branch to Cloudflare Pages using the correct `wrangler pages deploy` command and config file. To enable it, add these repository secrets:
 
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_API_TOKEN` (with permission to create Pages deployments)
