@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "wrangler pages dev .",
-    "deploy": "wrangler pages deploy . --config wrangler.pages.toml"
+    "deploy": "wrangler pages deploy ./dist --project-name=ir-dashboard"
   },
   "devDependencies": {
     "wrangler": "^4.50.0"
