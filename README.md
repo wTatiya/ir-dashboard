@@ -1,4 +1,7 @@
+
 # IR Dashboard
+
+https://ir-dashboard-05518960-e4d31.web.app/
 
 This repository hosts the static Interactive Reports (IR) dashboard. The project is already built and can be served by any basic HTTP server without additional tooling or external providers.
 
