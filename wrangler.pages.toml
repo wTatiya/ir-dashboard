@@ -1,2 +1,0 @@
-# Pages-specific configuration so wrangler pages deploy knows where to find the built site
-pages_build_output_dir = "."
