@@ -3,14 +3,21 @@
 // Renders 1) KPIs 2) trend line 3) donut 4) table
 
 function csvToJSON(csv) {
-  const [header, ...rows] = csv.trim().split(/\r?\n/);
-  const keys = header.split(',');
-  return rows.map(r => {
-    const cells = r.split(',');
-    const obj = {};
-    keys.forEach((k,i)=>obj[k]=cells[i]);
-    return obj;
-  });
+  const trimmed = csv.trim();
+  if (!trimmed) return [];
+  const [rawHeader, ...rows] = trimmed.split(/\r?\n/);
+  const header = rawHeader.replace(/^\uFEFF/, '');
+  const keys = header.split(',').map((key) => key.trim());
+  return rows
+    .filter((row) => row.trim().length)
+    .map((row) => {
+      const cells = row.split(',');
+      const obj = {};
+      keys.forEach((k, i) => {
+        obj[k] = (cells[i] || '').trim();
+      });
+      return obj;
+    });
 }
 
 async function loadData() {
@@ -18,7 +25,9 @@ async function loadData() {
     const res = await fetch('data/incidents.csv', {cache:'no-store'});
     if (!res.ok) throw new Error('no csv');
     const txt = await res.text();
-    return csvToJSON(txt);
+    const items = csvToJSON(txt);
+    if (!items.length) throw new Error('empty csv');
+    return items;
   } catch {
     // fallback demo data
     return [
