@@ -2,22 +2,61 @@
 // Fetches CSV if present. Falls back to demo data.
 // Renders 1) KPIs 2) trend line 3) donut 4) table
 
+function parseCsvLine(line, delimiter) {
+  const cells = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const next = line[i + 1];
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+    if (char === delimiter && !inQuotes) {
+      cells.push(current);
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+  cells.push(current);
+  return cells;
+}
+
+function detectDelimiter(line) {
+  const candidates = [',', ';', '\t', '|'];
+  let best = { delimiter: ',', count: 0 };
+  candidates.forEach((delimiter) => {
+    const count = parseCsvLine(line, delimiter).length;
+    if (count > best.count) {
+      best = { delimiter, count };
+    }
+  });
+  return best.delimiter;
+}
+
 function csvToJSON(csv) {
   const trimmed = csv.trim();
   if (!trimmed) return [];
-  const [rawHeader, ...rows] = trimmed.split(/\r?\n/);
+  const [rawHeader, ...rows] = trimmed.split(/\r?\n/).filter((row) => row.trim().length);
+  if (!rawHeader) return [];
   const header = rawHeader.replace(/^\uFEFF/, '');
-  const keys = header.split(',').map((key) => key.trim());
-  return rows
-    .filter((row) => row.trim().length)
-    .map((row) => {
-      const cells = row.split(',');
-      const obj = {};
-      keys.forEach((k, i) => {
-        obj[k] = (cells[i] || '').trim();
-      });
-      return obj;
+  const delimiter = detectDelimiter(header);
+  const keys = parseCsvLine(header, delimiter).map((key) => key.trim());
+  return rows.map((row) => {
+    const cells = parseCsvLine(row, delimiter);
+    const obj = {};
+    keys.forEach((k, i) => {
+      obj[k] = (cells[i] || '').trim();
     });
+    return obj;
+  });
 }
 
 async function loadData() {
