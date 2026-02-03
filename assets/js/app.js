@@ -2,40 +2,87 @@
 // Fetches CSV if present. Falls back to demo data.
 // Renders 1) KPIs 2) trend line 3) donut 4) table
 
+function parseCsvLine(line, delimiter) {
+  const cells = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const next = line[i + 1];
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+    if (char === delimiter && !inQuotes) {
+      cells.push(current);
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+  cells.push(current);
+  return cells;
+}
+
+function detectDelimiter(line) {
+  const candidates = [',', ';', '\t', '|'];
+  let best = { delimiter: ',', count: 0 };
+  candidates.forEach((delimiter) => {
+    const count = parseCsvLine(line, delimiter).length;
+    if (count > best.count) {
+      best = { delimiter, count };
+    }
+  });
+  return best.delimiter;
+}
+
 function csvToJSON(csv) {
   const trimmed = csv.trim();
   if (!trimmed) return [];
-  const [rawHeader, ...rows] = trimmed.split(/\r?\n/);
+  const [rawHeader, ...rows] = trimmed.split(/\r?\n/).filter((row) => row.trim().length);
+  if (!rawHeader) return [];
   const header = rawHeader.replace(/^\uFEFF/, '');
-  const keys = header.split(',').map((key) => key.trim());
-  return rows
-    .filter((row) => row.trim().length)
-    .map((row) => {
-      const cells = row.split(',');
-      const obj = {};
-      keys.forEach((k, i) => {
-        obj[k] = (cells[i] || '').trim();
-      });
-      return obj;
+  const delimiter = detectDelimiter(header);
+  const keys = parseCsvLine(header, delimiter).map((key) => key.trim());
+  return rows.map((row) => {
+    const cells = parseCsvLine(row, delimiter);
+    const obj = {};
+    keys.forEach((k, i) => {
+      obj[k] = (cells[i] || '').trim();
     });
+    return obj;
+  });
 }
 
 async function loadData() {
-  try {
-    const res = await fetch('data/incidents.csv', {cache:'no-store'});
-    if (!res.ok) throw new Error('no csv');
-    const txt = await res.text();
-    const items = csvToJSON(txt);
-    if (!items.length) throw new Error('empty csv');
-    return items;
-  } catch {
-    // fallback demo data
-    return [
-      {Incident_ID:'2511000089', Incident_Type:'GOP201', Incident_Type_Details:'Process gap', Location:'Burn Unit', Related_Location:'', Severity_Code:'1', Harm_Level:'Low', Incident_Status:'Open', Incident_Date:'2025-11-05', Report_Date:'2025-11-05', Confirmation_Date:'', Resolution_Date:''},
-      {Incident_ID:'2002000396', Incident_Type:'CPE101', Incident_Type_Details:'CPR unplanned', Location:'Med', Related_Location:'', Severity_Code:'E', Harm_Level:'Moderate', Incident_Status:'Closed', Incident_Date:'2020-02-17', Report_Date:'2020-02-28', Confirmation_Date:'2020-03-03', Resolution_Date:'2020-03-20'},
-      {Incident_ID:'2001000087', Incident_Type:'CPE401', Incident_Type_Details:'ER wait > 30m', Location:'Med', Related_Location:'Dialysis', Severity_Code:'E', Harm_Level:'Moderate', Incident_Status:'Open', Incident_Date:'2019-12-26', Report_Date:'2020-01-08', Confirmation_Date:'2020-01-08', Resolution_Date:''},
-    ];
+  const candidates = [
+    'data/incidents.csv',
+    'data/incident.csv',
+    'data/incident.cvs',
+  ];
+  for (const path of candidates) {
+    try {
+      const res = await fetch(path, {cache:'no-store'});
+      if (!res.ok) continue;
+      const txt = await res.text();
+      if (!txt.trim()) return [];
+      const items = csvToJSON(txt);
+      if (items.length) return items;
+    } catch {
+      // try next candidate
+    }
   }
+  // fallback demo data
+  return [
+    {Incident_ID:'2511000089', Incident_Type:'GOP201', Incident_Type_Details:'Process gap', Location:'Burn Unit', Related_Location:'', Severity_Code:'1', Harm_Level:'Low', Incident_Status:'Open', Incident_Date:'2025-11-05', Report_Date:'2025-11-05', Confirmation_Date:'', Resolution_Date:''},
+    {Incident_ID:'2002000396', Incident_Type:'CPE101', Incident_Type_Details:'CPR unplanned', Location:'Med', Related_Location:'', Severity_Code:'E', Harm_Level:'Moderate', Incident_Status:'Closed', Incident_Date:'2020-02-17', Report_Date:'2020-02-28', Confirmation_Date:'2020-03-03', Resolution_Date:'2020-03-20'},
+    {Incident_ID:'2001000087', Incident_Type:'CPE401', Incident_Type_Details:'ER wait > 30m', Location:'Med', Related_Location:'Dialysis', Severity_Code:'E', Harm_Level:'Moderate', Incident_Status:'Open', Incident_Date:'2019-12-26', Report_Date:'2020-01-08', Confirmation_Date:'2020-01-08', Resolution_Date:''},
+  ];
 }
 
 function setKPIs(items){
